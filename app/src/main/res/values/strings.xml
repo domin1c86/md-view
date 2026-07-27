@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">MdView</string>
+
+    <string name="untitled">Untitled</string>
+    <string name="open_file">Open file</string>
+    <string name="open_a_markdown_file">Open a Markdown file</string>
+    <string name="save">Save</string>
+    <string name="save_as">Save as…</string>
+    <string name="more_actions">More actions</string>
+    <string name="show_source">Edit source</string>
+    <string name="show_preview">Show preview</string>
+
+    <string name="empty_title">No document open</string>
+    <string name="empty_body">Pick a Markdown file to read it here, or switch to the editor to work on the source.</string>
+
+    <string name="unsaved_title">Discard unsaved changes?</string>
+    <string name="unsaved_body">This document has changes that have not been saved.</string>
+    <string name="discard">Discard</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="saved">Saved</string>
+    <string name="error_open">Could not open that file: %1$s</string>
+    <string name="error_save">Could not save: %1$s</string>
+
+    <!-- Stands in for an image, which this release does not download. -->
+    <string name="image_placeholder">[image: %1$s]</string>
+</resources>
