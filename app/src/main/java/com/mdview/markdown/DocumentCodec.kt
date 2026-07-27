@@ -11,7 +11,7 @@ object DocumentCodec {
     /** Bytes to inspect when deciding whether a file is text at all. */
     private const val SNIFF_LENGTH = 8 * 1024
 
-    private const val BOM = '﻿'
+    private const val BOM = '\uFEFF'
 
     /** How a file separated its lines, so saving can put the same ones back. */
     enum class LineEndings(val sequence: String) {

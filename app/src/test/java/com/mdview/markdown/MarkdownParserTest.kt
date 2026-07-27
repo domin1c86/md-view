@@ -1,5 +1,6 @@
 package com.mdview.markdown
 
+import org.commonmark.ext.front.matter.YamlFrontMatterBlock
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableCell
 import org.commonmark.node.BlockQuote
@@ -121,5 +122,34 @@ class MarkdownParserTest {
     @Test
     fun `an empty document parses to no blocks`() {
         assertTrue(MarkdownParser.parse("").children().isEmpty())
+    }
+
+    @Test
+    fun `front matter is parsed as metadata rather than a heading`() {
+        val document = MarkdownParser.parse(
+            """
+            ---
+            title: My note
+            tags: [a, b]
+            ---
+
+            # Real heading
+            """.trimIndent()
+        )
+
+        // Unparsed, `---` opens a thematic break and closes a setext heading, so
+        // `title: My note` would show up as an H2 above the document's real title.
+        val block = document.children().first()
+        assertTrue("expected front matter, got ${block::class.java.simpleName}", block is YamlFrontMatterBlock)
+
+        val headings = document.children().filterIsInstance<Heading>()
+        assertEquals(listOf("Real heading"), headings.map { collectText(it) })
+    }
+
+    @Test
+    fun `front matter markers still work as a thematic break mid-document`() {
+        val document = MarkdownParser.parse("Some prose.\n\n---\n\nMore prose.\n")
+
+        assertEquals(1, document.children().filterIsInstance<ThematicBreak>().size)
     }
 }

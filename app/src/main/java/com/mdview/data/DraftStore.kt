@@ -1,5 +1,6 @@
 package com.mdview.data
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -14,13 +15,17 @@ import java.security.MessageDigest
  * disk and silently discards the buffer.
  *
  * Drafts live in app-private storage, so no permission and no user-visible clutter.
- * Takes a plain [File] rather than a Context so it can be tested against a temp dir.
+ * Takes a plain [File] rather than a Context so it can be tested against a temp dir,
+ * and an injectable [dispatcher] so tests can observe writes without racing them.
  */
-class DraftStore(private val directory: File) {
+class DraftStore(
+    private val directory: File,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
 
     /** Stores [text] against [key], replacing any previous draft. */
     suspend fun save(key: String, text: String) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatcher) {
             runCatching {
                 directory.mkdirs()
                 // Write beside the target and rename: a process death midway through
@@ -37,13 +42,13 @@ class DraftStore(private val directory: File) {
     }
 
     /** The draft stored against [key], or null when there is none. */
-    suspend fun load(key: String): String? = withContext(Dispatchers.IO) {
+    suspend fun load(key: String): String? = withContext(dispatcher) {
         runCatching { fileFor(key).takeIf { it.isFile }?.readText() }.getOrNull()
     }
 
     /** Drops the draft for [key]. Called once its content has reached the real file. */
     suspend fun clear(key: String) {
-        withContext(Dispatchers.IO) { runCatching { fileFor(key).delete() } }
+        withContext(dispatcher) { runCatching { fileFor(key).delete() } }
     }
 
     private fun fileFor(key: String) = File(directory, "$key.md")
