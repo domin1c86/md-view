@@ -17,6 +17,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -43,6 +44,18 @@ android {
     }
 
     testOptions {
+        // No physical device is assumed: `wbuild.sh pixelApi34DebugAndroidTest`
+        // downloads the image, boots a headless emulator and tears it down again.
+        managedDevices {
+            localDevices {
+                create("pixelApi34") {
+                    device = "Pixel 6"
+                    apiLevel = 34
+                    systemImageSource = "aosp-atd"
+                }
+            }
+        }
+
         unitTests {
             // The inline renderer builds AnnotatedString values, which reach into a
             // few android.jar stubs; return defaults instead of throwing.
@@ -76,4 +89,10 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
