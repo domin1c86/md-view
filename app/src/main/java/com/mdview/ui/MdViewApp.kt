@@ -4,14 +4,18 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Redo
+import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Visibility
@@ -24,8 +28,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,9 +52,9 @@ import com.mdview.Mode
 import com.mdview.R
 
 /** What the user asked for while the document still had unsaved changes. */
-private enum class PendingAction { Open, Exit }
+private enum class PendingAction { Open, New, Exit }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,6 +63,12 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
     var pendingAction by remember { mutableStateOf<PendingAction?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+
+    // Hoisted out of the screens themselves: each mode switch tears its screen out of
+    // composition, so state remembered down there would put the reader back at the top
+    // of the document every time. Both of these already save across rotation.
+    val previewScrollState = rememberLazyListState()
+    val editorScrollState = rememberScrollState()
 
     // Many providers report .md as an unknown binary type, so accept that too --
     // filtering on text/* alone hides the very files this app exists to open.
@@ -74,6 +86,10 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         if (state.isDirty) pendingAction = PendingAction.Open else launchOpen()
     }
 
+    fun requestNew() {
+        if (state.isDirty) pendingAction = PendingAction.New else viewModel.newDocument()
+    }
+
     state.message?.let { message ->
         // Resolved during composition rather than inside the effect, so the string
         // follows the current configuration.
@@ -82,9 +98,18 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         } else {
             stringResource(message.resId)
         }
+        val actionLabel = message.actionResId?.let { stringResource(it) }
         LaunchedEffect(message.id) {
-            snackbarHostState.showSnackbar(text)
-            viewModel.consumeMessage(message.id)
+            val result = snackbarHostState.showSnackbar(
+                message = text,
+                actionLabel = actionLabel,
+                duration = if (actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.onMessageAction(message.id)
+            } else {
+                viewModel.consumeMessage(message.id)
+            }
         }
     }
 
@@ -106,8 +131,23 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     )
                 },
                 actions = {
+                    val editing = state.mode == Mode.Edit
+                    if (editing) {
+                        val undoState = viewModel.textState.undoState
+                        IconButton(onClick = { undoState.undo() }, enabled = undoState.canUndo) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Undo,
+                                contentDescription = stringResource(R.string.undo),
+                            )
+                        }
+                        IconButton(onClick = { undoState.redo() }, enabled = undoState.canRedo) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Redo,
+                                contentDescription = stringResource(R.string.redo),
+                            )
+                        }
+                    }
                     IconButton(onClick = { viewModel.toggleMode() }) {
-                        val editing = state.mode == Mode.Edit
                         Icon(
                             imageVector = if (editing) Icons.Outlined.Visibility else Icons.Outlined.Edit,
                             contentDescription = stringResource(
@@ -118,13 +158,24 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     IconButton(onClick = { viewModel.save() }, enabled = state.isDirty && state.uri != null) {
                         Icon(Icons.Outlined.Save, contentDescription = stringResource(R.string.save))
                     }
-                    IconButton(onClick = ::requestOpen) {
-                        Icon(Icons.Outlined.FolderOpen, contentDescription = stringResource(R.string.open_file))
-                    }
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_actions))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.open_file)) },
+                            onClick = {
+                                menuExpanded = false
+                                requestOpen()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_document)) },
+                            onClick = {
+                                menuExpanded = false
+                                requestNew()
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.save_as)) },
                             onClick = {
@@ -150,12 +201,19 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
             when {
-                state.mode == Mode.Edit -> EditorScreen(viewModel.textState, Modifier.weight(1f))
+                state.mode == Mode.Edit ->
+                    EditorScreen(viewModel.textState, editorScrollState, Modifier.weight(1f))
+
                 state.uri == null && viewModel.textState.text.isEmpty() ->
-                    EmptyState(onOpen = ::requestOpen, modifier = Modifier.weight(1f))
+                    EmptyState(
+                        onOpen = ::requestOpen,
+                        onNew = ::requestNew,
+                        modifier = Modifier.weight(1f),
+                    )
 
                 else -> PreviewScreen(
                     source = viewModel.textState.text.toString(),
+                    scrollState = previewScrollState,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -173,6 +231,7 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     pendingAction = null
                     when (action) {
                         PendingAction.Open -> launchOpen()
+                        PendingAction.New -> viewModel.newDocument()
                         PendingAction.Exit -> activity?.finish()
                         null -> Unit
                     }

@@ -14,7 +14,7 @@ import com.mdview.ui.theme.MdViewTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels { MainViewModel.factory(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -33,6 +33,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleViewIntent(intent)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Backgrounding is the last moment guaranteed before the process may be killed,
+        // so the autosave debounce is cut short here rather than waited out.
+        viewModel.flushDraft()
     }
 
     /** Opens a document handed over by a file manager or another app. */

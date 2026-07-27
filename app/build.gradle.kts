@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.savedstate)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -83,10 +84,15 @@ dependencies {
     implementation(libs.commonmark.ext.gfm.tables)
     implementation(libs.commonmark.ext.gfm.strikethrough)
     implementation(libs.commonmark.ext.autolink)
+    implementation(libs.commonmark.ext.yaml.front.matter)
+
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui)
 

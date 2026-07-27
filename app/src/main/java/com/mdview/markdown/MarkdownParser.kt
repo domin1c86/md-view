@@ -1,6 +1,7 @@
 package com.mdview.markdown
 
 import org.commonmark.ext.autolink.AutolinkExtension
+import org.commonmark.ext.front.matter.YamlFrontMatterExtension
 import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.node.Node
@@ -18,6 +19,10 @@ object MarkdownParser {
                 TablesExtension.create(),
                 StrikethroughExtension.create(),
                 AutolinkExtension.create(),
+                // Without this, a `---` metadata block is read as a thematic break
+                // followed by a setext heading, so every Obsidian or Hugo document
+                // opens with a bogus title. The renderer draws nothing for it.
+                YamlFrontMatterExtension.create(),
             )
         )
         .build()
