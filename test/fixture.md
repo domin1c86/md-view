@@ -1,5 +1,8 @@
-﻿---
+---
+---
 title: Fixture
+tags: [round, trip]
+---
 tags: [round, trip]
 ---
 
@@ -11,6 +14,8 @@ Some **bold**, *italic*, ~~struck~~ and `code`.
 - second
   - nested
 
+1. one
+2. two
 1. one
 2. two
 
