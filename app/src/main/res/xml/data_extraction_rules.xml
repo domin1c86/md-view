@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ equivalent of backup_rules.xml. Same reasoning: the library and the drafts
+  are keyed by URI grants that do not survive a move to another device, so they are
+  excluded from both cloud backup and direct device-to-device transfer.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="library/" />
+        <exclude domain="file" path="drafts/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="library/" />
+        <exclude domain="file" path="drafts/" />
+    </device-transfer>
+</data-extraction-rules>

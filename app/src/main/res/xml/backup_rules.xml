@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The recents list and the drafts are both keyed by document URIs, and a URI grant is
+  tied to the device that issued it. Restored onto a new phone every entry would point
+  at a document this app can no longer read, so the dashboard would come up full of
+  cards that fail on tap. Better to start empty.
+
+  Settings carry no such baggage and are worth keeping.
+-->
+<full-backup-content>
+    <exclude domain="file" path="library/" />
+    <exclude domain="file" path="drafts/" />
+</full-backup-content>
