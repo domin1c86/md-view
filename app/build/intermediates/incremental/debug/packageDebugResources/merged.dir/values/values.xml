@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1E293B</color>
+    <string name="app_name">MdView</string>
+    <string name="cancel">Cancel</string>
+    <string name="discard">Discard</string>
+    <string name="draft_restored">Restored unsaved changes</string>
+    <string name="empty_body">Pick a Markdown file to read it here, or switch to the editor to work on the source.</string>
+    <string name="empty_title">No document open</string>
+    <string name="error_open_denied">No permission to read that file</string>
+    <string name="error_open_generic">Could not open that file</string>
+    <string name="error_open_missing">That file is no longer there</string>
+    <string name="error_open_not_text">That does not look like a text file</string>
+    <string name="error_open_too_large">That file is too large to edit here</string>
+    <string name="error_save_denied">No permission to write to that file. Try “Save as…”</string>
+    <string name="error_save_generic">Could not save the document</string>
+    <string name="error_save_missing">The original file is no longer there. Try “Save as…”</string>
+    <string name="image_failed">Image unavailable: %1$s</string>
+    <string name="image_loading">Loading image…</string>
+    <string name="image_placeholder">[image: %1$s]</string>
+    <string name="more_actions">More actions</string>
+    <string name="new_document">New document</string>
+    <string name="open_a_markdown_file">Open a Markdown file</string>
+    <string name="open_file">Open file</string>
+    <string name="redo">Redo</string>
+    <string name="save">Save</string>
+    <string name="save_as">Save as…</string>
+    <string name="saved">Saved</string>
+    <string name="show_preview">Show preview</string>
+    <string name="show_source">Edit source</string>
+    <string name="start_a_new_document">Start a new document</string>
+    <string name="undo">Undo</string>
+    <string name="unsaved_body">This document has changes that have not been saved.</string>
+    <string name="unsaved_title">Discard unsaved changes?</string>
+    <string name="untitled">Untitled</string>
+    <style name="Theme.MdView" parent="android:Theme.Material.Light.NoActionBar"/>
+</resources>

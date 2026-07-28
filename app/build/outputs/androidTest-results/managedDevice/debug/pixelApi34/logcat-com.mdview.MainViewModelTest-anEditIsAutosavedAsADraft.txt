@@ -1,0 +1,2 @@
+07-28 11:56:41.955  1718  1741 I TestRunner: started: anEditIsAutosavedAsADraft(com.mdview.MainViewModelTest)
+07-28 11:56:41.975  1718  1741 I TestRunner: finished: anEditIsAutosavedAsADraft(com.mdview.MainViewModelTest)

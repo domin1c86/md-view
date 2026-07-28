@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.mdview.markdown.MarkdownParserTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-07-27T17:46:22.843Z" hostname="DESKTOP-PKAOAJ6" time="0.012">
+  <properties/>
+  <testcase name="fenced code keeps its language and literal text" classname="com.mdview.markdown.MarkdownParserTest" time="0.003"/>
+  <testcase name="an empty document parses to no blocks" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="table rows carry header flags and alignment" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="front matter markers still work as a thematic break mid-document" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="bullet list nests sublists inside their item" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="block quote and thematic break are present" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="headings keep their level" classname="com.mdview.markdown.MarkdownParserTest" time="0.0"/>
+  <testcase name="paragraphs are found for the prose blocks" classname="com.mdview.markdown.MarkdownParserTest" time="0.001"/>
+  <testcase name="front matter is parsed as metadata rather than a heading" classname="com.mdview.markdown.MarkdownParserTest" time="0.002"/>
+  <testcase name="ordered list exposes its start number" classname="com.mdview.markdown.MarkdownParserTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

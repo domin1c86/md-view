@@ -1,0 +1,2 @@
+07-28 11:56:41.994  1718  1741 I TestRunner: started: startingANewDocumentClearsEverything(com.mdview.MainViewModelTest)
+07-28 11:56:42.012  1718  1741 I TestRunner: finished: startingANewDocumentClearsEverything(com.mdview.MainViewModelTest)

@@ -1,0 +1,2 @@
+07-28 11:56:41.798  1718  1741 I TestRunner: started: aFailedSaveLeavesTheDocumentDirty(com.mdview.MainViewModelTest)
+07-28 11:56:41.878  1718  1741 I TestRunner: finished: aFailedSaveLeavesTheDocumentDirty(com.mdview.MainViewModelTest)

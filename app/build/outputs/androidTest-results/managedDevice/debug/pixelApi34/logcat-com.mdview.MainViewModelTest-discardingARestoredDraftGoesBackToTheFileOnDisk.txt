@@ -1,0 +1,2 @@
+07-28 11:56:41.880  1718  1741 I TestRunner: started: discardingARestoredDraftGoesBackToTheFileOnDisk(com.mdview.MainViewModelTest)
+07-28 11:56:41.908  1718  1741 I TestRunner: finished: discardingARestoredDraftGoesBackToTheFileOnDisk(com.mdview.MainViewModelTest)

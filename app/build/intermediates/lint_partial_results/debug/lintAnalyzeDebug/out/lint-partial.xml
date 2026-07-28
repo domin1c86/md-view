@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 9.3.1" type="partial_results">
+    <map id="UnsafeIntentLaunch">
+            <map id="unprotected">
+                <entry
+                    name="com.mdview.MainActivity"
+                    boolean="true"/>
+            </map>
+    </map>
+    <map id="UnusedResources">
+        <entry
+            name="model"
+            string="color[ic_launcher_background(U)],drawable[ic_launcher_foreground(U)],mipmap[ic_launcher(U),ic_launcher_round(U)],string[app_name(U),untitled(U),open_file(U),open_a_markdown_file(U),save(U),save_as(U),more_actions(U),show_source(U),show_preview(U),new_document(U),start_a_new_document(U),undo(U),redo(U),empty_title(U),empty_body(U),unsaved_title(U),unsaved_body(U),discard(U),cancel(U),saved(U),draft_restored(U),error_open_generic(U),error_open_missing(U),error_open_denied(U),error_open_too_large(U),error_open_not_text(U),error_save_generic(U),error_save_missing(U),error_save_denied(U),image_placeholder(U),image_loading(U),image_failed(U)],style[Theme_MdView(U)];2^0^1,3^0^1;;;"/>
+    </map>
+
+</incidents>

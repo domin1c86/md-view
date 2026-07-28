@@ -1,0 +1,68 @@
+07-28 11:57:24.114  1718  1741 I TestRunner: started: startingANewDocumentEmptiesTheEditor(com.mdview.MdViewAppTest)
+07-28 11:57:24.118  1718  1741 D IdlingRegistry: Registering idling resources: [androidx.compose.ui.test.EspressoLink@fb7dc44]
+07-28 11:57:24.122  1718  1741 W Settings: Setting always_finish_activities has moved from android.provider.Settings.System to android.provider.Settings.Global, returning read-only value.
+07-28 11:57:24.132  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: PRE_ON_CREATE
+07-28 11:57:24.132  1718  1718 V ActivityScenario: Activity lifecycle changed event received but ignored because the reported transition was not ON_CREATE while the last known transition was PRE_ON_CREATE
+07-28 11:57:24.139  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: CREATED
+07-28 11:57:24.139  1718  1718 V ActivityScenario: Update currentActivityStage to CREATED, currentActivity=com.mdview.MainActivity@6b6adc8
+07-28 11:57:24.140  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: STARTED
+07-28 11:57:24.140  1718  1718 V ActivityScenario: Update currentActivityStage to STARTED, currentActivity=com.mdview.MainActivity@6b6adc8
+07-28 11:57:24.141  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: RESUMED
+07-28 11:57:24.141  1718  1718 V ActivityScenario: Update currentActivityStage to RESUMED, currentActivity=com.mdview.MainActivity@6b6adc8
+07-28 11:57:24.146  1718  1718 D AutofillManager: Fill dialog is enabled:false, hints=[]
+07-28 11:57:24.149   384   384 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+07-28 11:57:24.188   529   567 W ziparchive: Unable to open '/data/app/~~O8OF_SbGpi3Zhee3I9AbGg==/com.mdview-qU2r065_VGShDiramXovzg==/base.dm': No such file or directory
+07-28 11:57:24.189   529   567 I ActivityTaskManager: Displayed com.mdview/.MainActivity for user 0: +64ms
+07-28 11:57:24.203   529  1658 I ImeTracker: com.mdview:4805e64e: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+07-28 11:57:24.203   529  1658 I ImeTracker: com.mdview:4805e64e: onCancelled at PHASE_SERVER_SHOULD_HIDE
+07-28 11:57:25.702  1718  1718 D Autofill Status: Autofill popup isn't shown because autofill is not available.
+07-28 11:57:25.702  1718  1718 D Autofill Status:
+07-28 11:57:25.702  1718  1718 D Autofill Status: Did you set up autofill?
+07-28 11:57:25.702  1718  1718 D Autofill Status: 1. Go to Settings > System > Languages&input > Advanced > Autofill Service
+07-28 11:57:25.702  1718  1718 D Autofill Status: 2. Pick a service
+07-28 11:57:25.702  1718  1718 D Autofill Status:
+07-28 11:57:25.702  1718  1718 D Autofill Status: Did you add an account?
+07-28 11:57:25.702  1718  1718 D Autofill Status: 1. Go to Settings > System > Languages&input > Advanced
+07-28 11:57:25.702  1718  1718 D Autofill Status: 2. Click on the settings icon next to the Autofill Service
+07-28 11:57:25.702  1718  1718 D Autofill Status: 3. Add your account
+07-28 11:57:25.719  1718  1718 I ImeTracker: com.mdview:f554a5e2: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT_BY_INSETS_API
+07-28 11:57:25.719  1718  1718 D InsetsController: show(ime(), fromIme=false)
+07-28 11:57:25.720  1718  1718 D InputMethodManager: showSoftInput() view=androidx.compose.ui.platform.AndroidComposeView{45518f8 VFED..... .F....ID 0,0-1080,2400 aid=1073741824} flags=0 reason=SHOW_SOFT_INPUT_BY_INSETS_API
+07-28 11:57:25.726  1718  1718 I ImeTracker: com.mdview:f248431f: onRequestShow at ORIGIN_CLIENT_SHOW_SOFT_INPUT reason SHOW_SOFT_INPUT
+07-28 11:57:25.726  1718  1718 D InputMethodManager: showSoftInput() view=androidx.compose.ui.platform.AndroidComposeView{45518f8 VFED..... .F....ID 0,0-1080,2400 aid=1073741824} flags=0 reason=SHOW_SOFT_INPUT
+07-28 11:57:25.727   529   888 I ImeTracker: com.mdview:f554a5e2: onCancelled at PHASE_SERVER_WAIT_IME
+07-28 11:57:25.790  1718  1718 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+07-28 11:57:25.790  1718  1718 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+07-28 11:57:26.719  1718  1718 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+07-28 11:57:26.719  1718  1718 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+07-28 11:57:26.762   529  1503 I ImeTracker: com.mdview:48c9abae: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+07-28 11:57:26.763   529  1503 I ImeTracker: com.mdview:48c9abae: onCancelled at PHASE_SERVER_SHOULD_HIDE
+07-28 11:57:26.763   529  1503 I ImeTracker: com.mdview:f248431f: onCancelled at PHASE_SERVER_WAIT_IME
+07-28 11:57:27.711  1718  1718 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+07-28 11:57:27.711  1718  1718 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+07-28 11:57:27.728  1718  1718 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@7b0580d
+07-28 11:57:27.730   529  1503 W InputManager-JNI: Input channel object 'fe7991a Pop-Up Window (client)' was disposed without first being removed with the input manager!
+07-28 11:57:27.769   529  1658 I ImeTracker: com.mdview:aebc0d7b: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+07-28 11:57:27.769   529  1658 I ImeTracker: com.mdview:aebc0d7b: onCancelled at PHASE_SERVER_SHOULD_HIDE
+07-28 11:57:27.856  1718  1718 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@9021116
+07-28 11:57:27.860  1718  1744 D OpenGLRenderer: endAllActiveAnimators on 0x7114fe08cb50 (UnprojectedRipple) with handle 0x7115fe0dd1b0
+07-28 11:57:27.861   529  1658 W InputManager-JNI: Input channel object 'fc2dcd4 com.mdview/com.mdview.MainActivity (client)' was disposed without first being removed with the input manager!
+07-28 11:57:27.926  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: PAUSED
+07-28 11:57:27.926  1718  1718 V ActivityScenario: Update currentActivityStage to PAUSED, currentActivity=com.mdview.MainActivity@6b6adc8
+07-28 11:57:27.963  1756  1773 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
+07-28 11:57:27.966   384   384 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+07-28 11:57:27.972   529   567 W ziparchive: Unable to open '/data/app/~~EwYBUQ4BhpRwv-RUjWM--Q==/com.mdview.test-mgY8hHQ9rsdFxggxJYcg4A==/base.dm': No such file or directory
+07-28 11:57:27.973   529   567 I ActivityTaskManager: Displayed com.mdview.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity for user 0: +48ms
+07-28 11:57:28.017   529  1503 I ImeTracker: com.android.fakesystemapp:bcf49760: onRequestHide at ORIGIN_SERVER_HIDE_INPUT reason HIDE_UNSPECIFIED_WINDOW
+07-28 11:57:28.018   529  1503 I ImeTracker: com.android.fakesystemapp:bcf49760: onCancelled at PHASE_SERVER_SHOULD_HIDE
+07-28 11:57:28.198   743   743 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+07-28 11:57:28.487  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: STOPPED
+07-28 11:57:28.488  1718  1718 V ActivityScenario: Update currentActivityStage to STOPPED, currentActivity=com.mdview.MainActivity@6b6adc8
+07-28 11:57:28.499  1718  1718 D LifecycleMonitor: Lifecycle status change: com.mdview.MainActivity@6b6adc8 in: DESTROYED
+07-28 11:57:28.499  1718  1718 V ActivityScenario: Update currentActivityStage to DESTROYED, currentActivity=null
+07-28 11:57:28.500  1718  1718 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=falsecallback=android.view.ViewRootImpl$$ExternalSyntheticLambda17@cb701
+07-28 11:57:28.504   529  1503 W InputManager-JNI: Input channel object '8164212 com.mdview/com.mdview.MainActivity (client)' was disposed without first being removed with the input manager!
+07-28 11:57:28.504  1718  1741 D IdlingRegistry: Unregistering idling resources: [androidx.compose.ui.test.EspressoLink@fb7dc44]
+07-28 11:57:28.507  1718  1718 I ImeTracker: com.mdview:15f12c1c: onRequestHide at ORIGIN_CLIENT_HIDE_SOFT_INPUT reason HIDE_SOFT_INPUT
+07-28 11:57:28.507  1718  1718 I ImeTracker: com.mdview:15f12c1c: onFailed at PHASE_CLIENT_VIEW_SERVED
+07-28 11:57:28.508  1718  1741 I TestRunner: finished: startingANewDocumentEmptiesTheEditor(com.mdview.MdViewAppTest)

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.mdview.markdown.DocumentCodecTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-07-27T17:46:22.765Z" hostname="DESKTOP-PKAOAJ6" time="0.004">
+  <properties/>
+  <testcase name="aStrippedBomComesBackOnEncode" classname="com.mdview.markdown.DocumentCodecTest" time="0.002"/>
+  <testcase name="classicMacLineEndingsAreRecognised" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="plainTextIsUnchanged" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="textIsNotMistakenForBinary" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="emptyContentIsHandled" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="windowsLineEndingsSurviveARoundTrip" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="byteOrderMarkIsStripped" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="nulBytesMarkAFileAsBinary" classname="com.mdview.markdown.DocumentCodecTest" time="0.001"/>
+  <testcase name="editsMadeAgainstCrlfContentAreWrittenBackAsCrlf" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <testcase name="windowsLineEndingsAreNormalisedForEditing" classname="com.mdview.markdown.DocumentCodecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

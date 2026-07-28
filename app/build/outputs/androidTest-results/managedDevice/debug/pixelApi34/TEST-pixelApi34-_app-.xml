@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="25" failures="0" errors="0" skipped="0" time="46.94" timestamp="2026-07-28T11:57:29" hostname="localhost">
+  <testsuite name="com.mdview.MainViewModelTest" tests="11" failures="0" errors="0" skipped="0" time="0.246" timestamp="2026-07-28T11:57:29" hostname="localhost">
+    <properties>
+      <property name="device" value="pixelApi34" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="aFailedSaveLeavesTheDocumentDirty" classname="com.mdview.MainViewModelTest" time="0.067" />
+    <testcase name="discardingARestoredDraftGoesBackToTheFileOnDisk" classname="com.mdview.MainViewModelTest" time="0.002" />
+    <testcase name="unsavedWorkComesBackAfterTheProcessIsKilled" classname="com.mdview.MainViewModelTest" time="0.028" />
+    <testcase name="openingReadsTheDocumentAndStartsClean" classname="com.mdview.MainViewModelTest" time="0.03" />
+    <testcase name="anEditIsAutosavedAsADraft" classname="com.mdview.MainViewModelTest" time="0.002" />
+    <testcase name="aScratchDocumentIsRecoveredWithNoFileToReopen" classname="com.mdview.MainViewModelTest" time="0.028" />
+    <testcase name="startingANewDocumentClearsEverything" classname="com.mdview.MainViewModelTest" time="0.027" />
+    <testcase name="savingPutsBackTheLineEndingsTheFileArrivedWith" classname="com.mdview.MainViewModelTest" time="0.002" />
+    <testcase name="editingMarksTheDocumentDirty" classname="com.mdview.MainViewModelTest" time="0.03" />
+    <testcase name="aMissingFileReportsSomethingAUserCanRead" classname="com.mdview.MainViewModelTest" time="0.002" />
+    <testcase name="savingWritesTheTextAndDropsTheDraft" classname="com.mdview.MainViewModelTest" time="0.028" />
+  </testsuite>
+  <testsuite name="com.mdview.MdViewAppTest" tests="14" failures="0" errors="0" skipped="0" time="46.383" timestamp="2026-07-28T11:57:29" hostname="localhost">
+    <properties>
+      <property name="device" value="pixelApi34" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="frontMatterDoesNotBecomeAHeading" classname="com.mdview.MdViewAppTest" time="3.906" />
+    <testcase name="undoIsOfferedOnlyOnceThereIsSomethingToUndo" classname="com.mdview.MdViewAppTest" time="2.447" />
+    <testcase name="redoPutsItBack" classname="com.mdview.MdViewAppTest" time="4.207" />
+    <testcase name="theEmptyStateOffersANewDocument" classname="com.mdview.MdViewAppTest" time="8.28" />
+    <testcase name="codeBlocksAndQuotesRenderInPreview" classname="com.mdview.MdViewAppTest" time="3.263" />
+    <testcase name="undoAndRedoAreHiddenInPreview" classname="com.mdview.MdViewAppTest" time="1.206" />
+    <testcase name="inlineFormattingLosesItsMarkersInPreview" classname="com.mdview.MdViewAppTest" time="3.261" />
+    <testcase name="savingIsDisabledUntilThereIsSomethingToSave" classname="com.mdview.MdViewAppTest" time="1.199" />
+    <testcase name="switchingModesKeepsTheSourceText" classname="com.mdview.MdViewAppTest" time="4.153" />
+    <testcase name="editingMarksTheDocumentDirty" classname="com.mdview.MdViewAppTest" time="2.346" />
+    <testcase name="headingsAndListsRenderInPreview" classname="com.mdview.MdViewAppTest" time="3.24" />
+    <testcase name="emptyStateIsShownBeforeAnyDocumentIsOpen" classname="com.mdview.MdViewAppTest" time="1.247" />
+    <testcase name="undoTakesTheTypedTextBackOut" classname="com.mdview.MdViewAppTest" time="3.243" />
+    <testcase name="startingANewDocumentEmptiesTheEditor" classname="com.mdview.MdViewAppTest" time="4.385" />
+  </testsuite>
+</testsuites>

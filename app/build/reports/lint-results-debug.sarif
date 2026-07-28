@@ -1,0 +1,162 @@
+{
+    "$schema" : "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+    "version" : "2.1.0",
+    "runs" : [
+        {
+            "tool": {
+                "driver": {
+                    "name": "Android Lint",
+                    "fullName": "Android Lint (in gradle)",
+                    "version": "9.3.1",
+                    "semanticVersion": "9.3.1",
+                    "organization": "Google",
+                    "informationUri": "https://developer.android.com/studio/write/lint",
+                    "fullDescription": {
+                        "text": "Static analysis originally for Android source code but now performing general analysis"
+                    },
+                    "language": "en-US",
+                    "rules": [
+                        {
+                            "id": "ObsoleteSdkInt",
+                            "shortDescription": {
+                                "text": "Obsolete SDK_INT Version Check"
+                            },
+                            "fullDescription": {
+                                "text": "This check flags version checks that are not necessary, because the minSdkVersion (or surrounding known API level) is already at least as high as the version checked for.\n\nSimilarly, it also looks for resources in -vNN folders, such as values-v14 where the version qualifier is less than or equal to the minSdkVersion, where the contents should be merged into the best folder.",
+                                "markdown": "This check flags version checks that are not necessary, because the `minSdkVersion` (or surrounding known API level) is already at least as high as the version checked for.\n\nSimilarly, it also looks for resources in `-vNN` folders, such as `values-v14` where the version qualifier is less than or equal to the `minSdkVersion`, where the contents should be merged into the best folder."
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 50
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Performance"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "OldTargetApi",
+                            "shortDescription": {
+                                "text": "Target SDK attribute is not targeting latest version"
+                            },
+                            "fullDescription": {
+                                "text": "When your application or sdk runs on a version of Android that is more recent than your targetSdk specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the targetSdk is less than 14, your app may get an option button in the UI.\n\nTo fix this issue, set the targetSdk to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:\nhttps://developer.android.com/distribute/best-practices/develop/target-sdk.html",
+                                "markdown": "When your application or sdk runs on a version of Android that is more recent than your `targetSdk` specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the `targetSdk` is less than 14, your app may get an option button in the UI.\n\nTo fix this issue, set the `targetSdk` to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:\nhttps://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+                            },
+                            "defaultConfiguration": {
+                                "level": "warning",
+                                "rank": 50
+                            },
+                            "properties": {
+                                "tags": [
+                                    "Correctness"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "originalUriBaseIds": {
+                "%SRCROOT%": {
+                    "uri": "file:///D:/Coding/md-view/"
+                }
+            },
+            "results": [
+                {
+                    "ruleId": "OldTargetApi",
+                    "ruleIndex": 1,
+                    "message": {
+                        "text": "Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details.",
+                        "markdown": "Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "app/build.gradle.kts"
+                                },
+                                "region": {
+                                    "startLine": 17,
+                                    "startColumn": 9,
+                                    "endLine": 17,
+                                    "endColumn": 23,
+                                    "charOffset": 549,
+                                    "charLength": 14,
+                                    "snippet": {
+                                        "text": "targetSdk = 36"
+                                    }
+                                },
+                                "contextRegion": {
+                                    "startLine": 15,
+                                    "endLine": 20,
+                                    "snippet": {
+                                        "text": "        // Held one release back deliberately: nothing here needs the API 37\n        // runtime behaviour changes, and 36 is the level this app was tested at.\n        targetSdk = 36\n        versionCode = 1\n        versionName = \"1.0\"\n"
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "fixes": [
+                        {
+                            "description": {
+                                "text": "Update targetSdkVersion to 37"
+                            },
+                            "artifactChanges": [
+                                {
+                                    "artifactLocation": {
+                                        "uriBaseId": "%SRCROOT%",
+                                        "uri": "app/build.gradle.kts"
+                                    },
+                                    "replacements": [
+                                        {
+                                            "deletedRegion": {
+                                                "startLine": 17,
+                                                "startColumn": 21,
+                                                "charOffset": 561,
+                                                "endLine": 17,
+                                                "endColumn": 23,
+                                                "charLength": 2
+                                            },
+                                            "insertedContent": {
+                                                "text": "37\n"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "partialFingerprints": {
+                        "sourceContext/v1": "541fc9ebb14bf4e8"
+                    }
+                },
+                {
+                    "ruleId": "ObsoleteSdkInt",
+                    "ruleIndex": 0,
+                    "message": {
+                        "text": "This folder configuration (v26) is unnecessary; minSdkVersion is 26. Merge all the resources in this folder into mipmap-anydpi.",
+                        "markdown": "This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`."
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uriBaseId": "%SRCROOT%",
+                                    "uri": "app/src/main/res/mipmap-anydpi-v26"
+                                },
+                                "region": {
+                                    "startLine": 1
+                                }                            }
+                        }
+                    ],
+                    "fixes": [
+                    ],
+                    "partialFingerprints": {
+                    }
+                }
+            ]
+        }
+    ]
+}
