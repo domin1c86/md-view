@@ -1,58 +1,27 @@
-\---
-
+---
 title: Fixture
-
-tags: \[round, trip]
-
-\---
+tags: [round, trip]
+---
 
 
+# Heading one
 
-\# Heading one
-
-
-
-Some \*\*bold\*\*, \*italic\*, \~\~struck\~\~ and `code`.
+Some **bold**, *italic*, ~~strunk~~ and  `code`
 
 
+- first
+- second
+  - nested
 
-\- first
-
-\- second
-
-&#x20; - nested
-
-
-
-1\. one
-
-2\. two
-
-
+1. one
+2. two
 
 > Quoted line.
 
-
-
 ```kotlin
-
-fun main() = Unit
-
+fun main() = Unit()
 ```
 
+![remote_image](https://www.mediawiki.org/wiki/MediaWiki#/media/File:Wikimedia_Hackathon_2026_group_photo_01.jpg)
 
-
-| Left | Center | Right |
-
-|:-----|:------:|------:|
-
-| a    | b      | c     |
-
-
-
-!\[remote image](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Example.jpg/320px-Example.jpg)
-
-
-
-\[A link](https://example.com)
-
+[A link](https://example.com)
