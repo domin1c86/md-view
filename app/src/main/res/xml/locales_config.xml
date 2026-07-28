@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Declares the languages MdView ships, so Android 13+ lists it under
+  Settings > Apps > Language. The in-app picker in Mine writes through to the same
+  platform setting, which is why the two never disagree.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="zh-Hans" />
+</locale-config>

@@ -16,6 +16,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mdview.Destination
 import com.mdview.MainViewModel
+import com.mdview.data.LanguageChoice
 import com.mdview.data.LibraryState
 import com.mdview.data.RemoteImagePolicy
 import com.mdview.data.Settings
@@ -37,6 +38,7 @@ fun MdViewRoot(
     viewModel: MainViewModel,
     settings: Settings,
     onChangeSettings: ((Settings) -> Settings) -> Unit,
+    onChangeLanguage: (LanguageChoice) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,7 +75,7 @@ fun MdViewRoot(
                     onOpen = { viewModel.open(it.uri.toUri()) },
                     onToggleFavorite = { viewModel.setFavorite(it.uri, !it.isFavorite) },
                     onForget = { viewModel.forget(it.uri) },
-                    settingsContent = { MineTab(settings, onChangeSettings, it) },
+                    settingsContent = { MineTab(settings, onChangeSettings, onChangeLanguage, it) },
                     modifier = modifier,
                 )
             }

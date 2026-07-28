@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MdView</string>
+
+    <string name="untitled">未命名</string>
+    <string name="open_file">打开文件</string>
+    <string name="open_a_markdown_file">打开 Markdown 文件</string>
+    <string name="save">保存</string>
+    <string name="save_as">另存为…</string>
+    <string name="more_actions">更多操作</string>
+    <string name="show_source">编辑源码</string>
+    <string name="show_preview">查看预览</string>
+    <string name="new_document">新建文档</string>
+    <string name="start_a_new_document">新建一个文档</string>
+    <string name="undo">撤销</string>
+    <string name="redo">重做</string>
+
+    <string name="empty_title">未打开文档</string>
+    <string name="empty_body">选一个 Markdown 文件在这里阅读，或切换到编辑器修改源码。</string>
+
+    <!-- Dashboard -->
+    <string name="tab_recent">最近</string>
+    <string name="tab_favorites">收藏</string>
+    <string name="tab_mine">我的</string>
+    <string name="back_to_list">返回文档列表</string>
+    <string name="add_document">添加文档</string>
+    <string name="add_to_favorites">加入收藏</string>
+    <string name="remove_from_favorites">取消收藏</string>
+    <string name="remove_from_list">从列表中移除</string>
+    <string name="unsaved_draft">未保存的草稿</string>
+    <string name="unsaved_draft_body">你还没存成文件的内容。点击继续编辑。</string>
+    <string name="document_unavailable">此设备上已无法访问</string>
+    <string name="document_from_another_app">由其他应用打开，之后可能无法再次打开</string>
+    <string name="document_read_only">只读</string>
+    <string name="no_recent_title">这里还是空的</string>
+    <string name="no_recent_body">你打开过的文档会出现在这里，方便接着上次继续。</string>
+    <string name="no_favorites_title">还没有收藏</string>
+    <string name="no_favorites_body">在“最近”里给文档加星，它就会出现在这里。</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">外观</string>
+    <string name="settings_reading">阅读</string>
+    <string name="settings_privacy">隐私</string>
+    <string name="settings_about">关于</string>
+
+    <string name="setting_theme">主题</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+
+    <string name="setting_dynamic_color">从壁纸取色</string>
+    <string name="setting_dynamic_color_body">Material You。Android 11 及以下无效。</string>
+
+    <string name="setting_language">语言</string>
+    <string name="language_system">跟随系统</string>
+    <string name="language_english">English</string>
+    <string name="language_chinese">简体中文</string>
+
+    <string name="setting_reading_size">字号</string>
+    <string name="setting_reading_size_body">只作用于文档正文，不影响应用自身的控件。</string>
+    <string name="reading_size_small">小</string>
+    <string name="reading_size_medium">中</string>
+    <string name="reading_size_large">大</string>
+
+    <string name="setting_remote_images">加载网络图片</string>
+    <string name="setting_remote_images_body">文档可以借此把你打开它的时间透露给图片的托管方。</string>
+    <string name="remote_images_never">从不</string>
+    <string name="remote_images_unmetered">仅在不计流量的网络下</string>
+    <string name="remote_images_always">始终</string>
+
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_body">一个 Markdown 阅读与编辑工具。文件只留在你的设备上，不会上传。</string>
+
+    <!-- Relative times on the document cards -->
+    <string name="time_just_now">刚刚</string>
+    <string name="time_yesterday">昨天</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="other">%d 分钟前</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d 小时前</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d 天前</item>
+    </plurals>
+    <!-- Filename, then how long ago it was opened. e.g. "notes.md · 2 小时前" -->
+    <string name="card_meta">%1$s · %2$s</string>
+
+    <string name="unsaved_title">放弃未保存的修改？</string>
+    <string name="unsaved_body">这个文档有尚未保存的修改。</string>
+    <string name="discard">放弃</string>
+    <string name="cancel">取消</string>
+
+    <string name="saved">已保存</string>
+    <string name="draft_restored">已恢复未保存的修改</string>
+
+    <string name="error_open_generic">无法打开该文件</string>
+    <string name="error_open_missing">该文件已经不存在</string>
+    <string name="error_open_denied">没有读取该文件的权限</string>
+    <string name="error_open_too_large">该文件太大，无法在这里编辑</string>
+    <string name="error_open_not_text">这看起来不是文本文件</string>
+    <string name="error_save_generic">无法保存文档</string>
+    <string name="error_save_missing">原文件已经不存在。试试“另存为…”</string>
+    <string name="error_save_denied">没有写入该文件的权限。试试“另存为…”</string>
+
+    <!-- Stands in for an image that sits inside a paragraph rather than on its own. -->
+    <string name="image_placeholder">[图片：%1$s]</string>
+    <string name="image_loading">正在加载图片…</string>
+    <string name="image_failed">图片无法加载：%1$s</string>
+    <string name="image_blocked">未加载图片：%1$s</string>
+</resources>

@@ -1,8 +1,10 @@
 package com.mdview
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -17,6 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mdview.data.AppLocale
+import com.mdview.data.LanguageChoice
 import com.mdview.data.SettingsStore
 import com.mdview.data.ThemeChoice
 import com.mdview.ui.MdViewRoot
@@ -27,6 +31,16 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels { MainViewModel.factory(this) }
 
     private val settingsStore: SettingsStore get() = MdViewApplication.from(this).settings
+
+    /**
+     * Below API 33 this is the only place the in-app language can be applied -- it runs
+     * before onCreate, and everything resolved from this context afterwards inherits it.
+     * `this.filesDir` is not available yet, hence reading the store through [newBase].
+     */
+    override fun attachBaseContext(newBase: Context) {
+        val choice = MdViewApplication.from(newBase).settings.current.language
+        super.attachBaseContext(AppLocale.wrap(newBase, choice))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Read before super.onCreate: enableEdgeToEdge decides the status-bar icon
@@ -46,8 +60,11 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) {
                     MdViewRoot(
                         viewModel = viewModel,
-                        settings = settings,
+                        settings = settings.copy(
+                            language = AppLocale.current(this, settings.language),
+                        ),
                         onChangeSettings = settingsStore::update,
+                        onChangeLanguage = ::changeLanguage,
                     )
                 }
             }
@@ -89,6 +106,18 @@ class MainActivity : ComponentActivity() {
         window.setBackgroundDrawable(
             (if (dark) WINDOW_DARK else WINDOW_LIGHT).toInt().toDrawable()
         )
+    }
+
+    /**
+     * Switching language has to restart the Activity so every string is re-resolved.
+     * On API 33+ the platform does that itself once [AppLocale.apply] lands; below it,
+     * the wrapped context is only built in [attachBaseContext], so recreate explicitly.
+     */
+    private fun changeLanguage(choice: LanguageChoice) {
+        if (settingsStore.current.language == choice) return
+        settingsStore.update { it.copy(language = choice) }
+        AppLocale.apply(this, choice)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) recreate()
     }
 
     private fun systemIsDark(): Boolean =

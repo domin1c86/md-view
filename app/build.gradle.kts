@@ -45,6 +45,15 @@ android {
         buildConfig = true
     }
 
+    bundle {
+        language {
+            // The in-app language picker can only offer translations that are actually
+            // installed. Per-language splits would ship a device set to English nothing
+            // but English, and the Chinese option would silently do nothing.
+            enableSplit = false
+        }
+    }
+
     testOptions {
         // No physical device is assumed: `wbuild.sh pixelApi34DebugAndroidTest`
         // downloads the image, boots a headless emulator and tears it down again.

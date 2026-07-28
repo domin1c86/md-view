@@ -49,6 +49,7 @@ object SettingsTags {
 fun MineTab(
     settings: Settings,
     onChange: ((Settings) -> Settings) -> Unit,
+    onChangeLanguage: (LanguageChoice) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -85,7 +86,9 @@ fun MineTab(
                 options = LanguageChoice.entries,
                 selected = settings.language,
                 label = ::languageLabel,
-                onSelect = { choice -> onChange { it.copy(language = choice) } },
+                // Not routed through onChange: switching language also has to tell the
+                // platform and restart the Activity, which only the Activity can do.
+                onSelect = onChangeLanguage,
             )
         }
 
