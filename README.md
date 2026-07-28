@@ -1,6 +1,15 @@
 # MdView
 
-A minimal Markdown reader and editor for Android. Two modes, nothing else:
+A minimal Markdown reader and editor for Android.
+
+The app opens on a **dashboard** of documents you have opened before, shown as cards with
+their heading and a couple of lines of the text. Three tabs along the bottom:
+
+- **Recent** — everything you have opened, newest first.
+- **Favourites** — the ones you starred.
+- **Mine** — theme, language, reading text size and image loading.
+
+Tap a card and you get the document itself, in one of two modes:
 
 - **Preview** — the document rendered as formatted, readable text.
 - **Source** — a plain-text editor for the raw Markdown, saved back to the same file.
@@ -12,6 +21,10 @@ No cloud sync, no export, no formatting toolbar, no syntax highlighting.
 Files are opened through the Storage Access Framework, so the app needs no storage
 permission — the file you pick in the system picker is the grant. It also registers for
 `ACTION_VIEW`, so `.md` files can be opened straight from a file manager.
+
+The dashboard is a list of *documents you have opened*, not a file browser: the picker
+grants access to one file at a time, so there is nothing to browse. Starring a document
+also exempts it from the 50-entry cap, and removing a card hands its access grant back.
 
 Markdown is parsed by [commonmark-java](https://github.com/commonmark/commonmark-java)
 with the GitHub tables, strikethrough and autolink extensions plus YAML front matter,
@@ -33,15 +46,34 @@ authored in Notepad still looks untouched to the tools that made it.
 | Block rendering | `.../markdown/MarkdownRenderer.kt` |
 | Inline rendering | `.../markdown/InlineRenderer.kt` |
 | Encoding and line endings | `.../markdown/DocumentCodec.kt` |
+| Card headings and excerpts | `.../markdown/DocumentSummary.kt` |
 | File I/O (SAF) | `.../data/DocumentRepository.kt` |
 | Autosaved drafts | `.../data/DraftStore.kt` |
-| State | `.../MainViewModel.kt` |
-| Screens | `.../ui/` |
+| Recents and favourites | `.../data/LibraryStore.kt` |
+| Preferences | `.../data/SettingsStore.kt` |
+| In-app language | `.../data/AppLocale.kt` |
+| State and navigation | `.../MainViewModel.kt` |
+| Dashboard | `.../ui/dashboard/` |
+| Document screen | `.../ui/` |
+
+### Settings
+
+The **Mine** tab carries five preferences, applied the moment you tap them:
+
+| Setting | Notes |
+|:--|:--|
+| Theme | System / Light / Dark, independent of what the device is doing |
+| Colours from your wallpaper | Material You. Hidden below Android 12, where it does nothing |
+| Language | System / English / 简体中文. On Android 13+ this is the same setting the system exposes under Apps → Language |
+| Text size | Scales the document and the editor, not the app's own controls |
+| Load images from the web | Never / unmetered networks only / always |
 
 ### Images
 
 Images are fetched with [Coil](https://coil-kt.github.io/coil/), which is why the app
-declares `INTERNET`. Two limits are worth knowing:
+declares `INTERNET`. Whether a *remote* image loads depends on the setting above;
+`data:`, `content:` and `file:` images always render, since they never leave the device.
+Two limits are worth knowing:
 
 - Only an image on a line of its own becomes a real image. One sitting inside a sentence
   stays an `[image: alt]` placeholder.
@@ -61,7 +93,12 @@ gradlew.bat testDebugUnitTest      :: JVM tests: parser, inline renderer, codec,
 gradlew.bat lintDebug
 gradlew.bat assembleRelease        :: minified, unsigned
 gradlew.bat pixelApi34DebugAndroidTest   :: boots a managed emulator, no device needed
+gradlew.bat pixelApi30DebugAndroidTest   :: the pre-Android-13 language path
 ```
+
+`pixelApi30` needs its system-image licence accepted once (`sdkmanager.bat --licenses`).
+It exists because Android 13+ hands per-app language to the platform, so API 34 never
+exercises the older code path where the app wraps its own context.
 
 A single test class or method:
 
@@ -140,3 +177,6 @@ building on Windows.
 AGP 9.3.1 (which supplies Kotlin itself — the standalone `kotlin-android` plugin is
 rejected), Gradle 9.6.1, Compose BOM 2026.06.01, commonmark 0.29.0, Coil 3.5.0,
 `compileSdk` 37, `minSdk` 26, `targetSdk` 36.
+
+No navigation library, no DataStore, no Room, no serialisation library: navigation is a
+`when` over two destinations, and both stores are plain files with hand-written codecs.

@@ -67,6 +67,21 @@ android {
                     // translate; being explicit keeps the tests running either way.
                     testedAbi = "x86_64"
                 }
+
+                // API 34 only ever exercises LocaleManager. Everything sharp about the
+                // in-app language -- the attachBaseContext wrapper, the font-scale trap,
+                // Locale.setDefault -- lives on the pre-33 path, which needs a device
+                // old enough to take it.
+                //
+                // Needs its image licence accepted once before it will run:
+                //   sdkmanager.bat --licenses
+                // The API 30 ATD image is 32-bit only, unlike the API 34 one.
+                create("pixelApi30") {
+                    device = "Pixel 6"
+                    apiLevel = 30
+                    systemImageSource = "aosp-atd"
+                    testedAbi = "x86"
+                }
             }
         }
 

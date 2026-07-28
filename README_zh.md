@@ -1,6 +1,14 @@
 # MdView
 
-面向 Android 的极简 Markdown 阅读与编辑器。只有两种模式，别无其他：
+面向 Android 的极简 Markdown 阅读与编辑器。
+
+打开应用先看到的是**文档面板**：以卡片列出你此前打开过的文档，附带标题和正文开头几行。底部有三个标签页：
+
+- **最近** — 打开过的全部文档，按时间倒序。
+- **收藏** — 你加过星的那些。
+- **我的** — 主题、语言、阅读字号与图片加载。
+
+点击卡片进入文档本身，仍是两种模式：
 
 - **预览（Preview）** — 将文档渲染为排版后的可读文本。
 - **源码（Source）** — 编辑原始 Markdown 的纯文本编辑器，保存回同一文件。
@@ -10,6 +18,8 @@
 ## 工作原理
 
 文件通过 Storage Access Framework 打开，因此应用不需要存储权限 — 你在系统选择器里选中的文件即授权。应用还注册了 `ACTION_VIEW`，可从文件管理器直接打开 `.md` 文件。
+
+面板列的是**你打开过的文档**，而不是文件浏览器：选择器一次只授权一个文件，本来也没什么可浏览的。给文档加星还会让它免于 50 条上限的淘汰，移除卡片则会把对应的访问授权交还系统。
 
 Markdown 由 [commonmark-java](https://github.com/commonmark/commonmark-java) 解析，并启用 GitHub 表格、删除线、自动链接扩展以及 YAML front matter，再渲染为原生 Jetpack Compose 组件 — 不用 WebView，也不做 `TextView` 互操作。
 
@@ -23,14 +33,31 @@ Markdown 由 [commonmark-java](https://github.com/commonmark/commonmark-java) �
 | 块级渲染 | `.../markdown/MarkdownRenderer.kt` |
 | 行内渲染 | `.../markdown/InlineRenderer.kt` |
 | 编码与换行 | `.../markdown/DocumentCodec.kt` |
+| 卡片标题与摘要 | `.../markdown/DocumentSummary.kt` |
 | 文件 I/O（SAF） | `.../data/DocumentRepository.kt` |
 | 自动保存草稿 | `.../data/DraftStore.kt` |
-| 状态 | `.../MainViewModel.kt` |
-| 界面 | `.../ui/` |
+| 最近与收藏 | `.../data/LibraryStore.kt` |
+| 偏好设置 | `.../data/SettingsStore.kt` |
+| 应用内语言 | `.../data/AppLocale.kt` |
+| 状态与导航 | `.../MainViewModel.kt` |
+| 文档面板 | `.../ui/dashboard/` |
+| 文档界面 | `.../ui/` |
+
+### 设置
+
+**我的**标签页有五项偏好，点选即刻生效：
+
+| 设置 | 说明 |
+|:--|:--|
+| 主题 | 跟随系统／浅色／深色，与设备当前设置无关 |
+| 从壁纸取色 | Material You。Android 12 以下会隐藏，因为那里本就无效 |
+| 语言 | 跟随系统／English／简体中文。Android 13+ 上这与系统「应用 → 语言」里的是同一项设置 |
+| 字号 | 只放大文档与编辑器，不影响应用自身控件 |
+| 加载网络图片 | 从不／仅在不计流量的网络下／始终 |
 
 ### 图片
 
-图片通过 [Coil](https://coil-kt.github.io/coil/) 拉取，因此应用声明了 `INTERNET`。有两点限制值得知道：
+图片通过 [Coil](https://coil-kt.github.io/coil/) 拉取，因此应用声明了 `INTERNET`。**远程**图片是否加载取决于上面那项设置；`data:`、`content:`、`file:` 图片始终渲染，因为它们本来就不出设备。另有两点限制值得知道：
 
 - 只有独占一行的图片才会渲染为真正的图片。嵌在句子里的仍显示为 `[image: alt]` 占位符。
 - 只有绝对引用能解析 — `https://`、`content://`、`file://`、`data:`。
@@ -111,3 +138,5 @@ tools/wbuild.sh testDebugUnitTest
 ## 版本
 
 AGP 9.3.1（自身提供 Kotlin — 独立的 `kotlin-android` 插件会被拒绝）、Gradle 9.6.1、Compose BOM 2026.06.01、commonmark 0.29.0、Coil 3.5.0、`compileSdk` 37、`minSdk` 26、`targetSdk` 36。
+
+没有引入导航库、DataStore、Room 或序列化库：导航就是在两个目标之间的一个 `when`，两个存储都是手写编解码器加普通文件。

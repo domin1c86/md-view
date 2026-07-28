@@ -1,8 +1,8 @@
 # Handoff — what needs your hands
 
-Everything in the production-baseline plan is implemented and committed (`4a6175a`,
-`901f62b`). What follows is only the work that cannot be done for you: it needs a
-Windows machine, a human tapping the system file picker, or a decision that is yours.
+The production baseline and the file-explorer dashboard are both implemented and
+committed. What follows is only the work that cannot be done for you: it needs a Windows
+machine, a human tapping the system file picker, or a decision that is yours.
 
 Reference environment is **Windows**. Commands below are `cmd`/PowerShell from the
 project root.
@@ -40,10 +40,22 @@ Expected results:
 
 | Command | Expect |
 |:--|:--|
-| `testDebugUnitTest` | **38 tests, 0 failures** across 4 classes |
-| `pixelApi34DebugAndroidTest` | **25 tests, 0 failures** (boots its own emulator — no device needed) |
+| `testDebugUnitTest` | **82 tests, 0 failures** across 8 classes |
+| `pixelApi34DebugAndroidTest` | **73 tests, 0 failures** (boots its own emulator — no device needed) |
 | `lintDebug` | **0 errors, exactly 2 warnings**: `OldTargetApi` and `ObsoleteSdkInt` |
-| `assembleRelease` | succeeds, unsigned APK ≈ **1.6 MB** |
+| `assembleRelease` | succeeds, unsigned APK ≈ **1.7 MB** |
+
+One more device is defined but has never run here, because its system image needs a
+licence accepted and that is not mine to accept:
+
+```bat
+sdkmanager.bat --licenses
+gradlew.bat pixelApi30DebugAndroidTest
+```
+
+`pixelApi30` is the only coverage of the pre-Android-13 language path — above API 33 the
+platform handles per-app language itself, so API 34 never touches the code that wraps the
+app's own context. Worth running once.
 
 Both lint warnings are deliberate and explained in `CLAUDE.md`. **Any third warning is a
 regression** — that is the check, not the count itself.
@@ -110,7 +122,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 | # | Do this | Expect |
 |:--|:--|:--|
-| 1 | Open `fixture.md` through the app's Open action | Front matter renders as **nothing** — no bogus "title: Fixture" heading above "Heading one" |
+| 1 | Tap **+** → **Open file**, pick `fixture.md` | Front matter renders as **nothing** — no bogus "title: Fixture" heading above "Heading one" |
 | 2 | Look at the first heading | "Heading one" is styled as a heading. If the BOM leaked through it would render as plain text |
 | 3 | Scroll to the image | It loads (needs network). A broken URL should show a failure notice, not a crash |
 | 4 | Check the table and the code block | 3 columns with left/center/right alignment; `kotlin` label above `fun main() = Unit` |
@@ -121,11 +133,30 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 9 | Save, then reopen `fixture.md` in Notepad | Still CRLF, still BOM. File size should have grown by exactly the characters you typed |
 | 10 | Type an edit, press HOME, then `adb shell am force-stop com.mdview`, relaunch | The edit is **back**, title shows a `•`, snackbar says "Restored unsaved changes" with a **Discard** action |
 | 11 | Tap that Discard | Buffer reverts to what is on disk, `•` clears |
-| 12 | Open a `.md` from a file manager ("Open with" → MdView) | Document loads directly, no empty state |
-| 13 | Open a large non-Markdown file (a `.jpg` renamed to `.md`, or anything > 2 MB) | A readable error message, not a class name like `java.io.IOException` |
+| 12 | Open a `.md` from a file manager ("Open with" → MdView) | The document opens directly — **not** the dashboard with the file loading invisibly behind it. Back out to the dashboard and tap the same file in Files again: it must come back, with your unsaved edits intact |
+| 13 | Open a large non-Markdown file (a `.jpg` renamed to `.md`, or anything > 2 MB) | A readable error message, not a class name like `java.io.IOException`, and you stay on the dashboard rather than landing in a blank editor |
 
-Item 10 is the one that matters most — it is the data-loss fix, and it is the reason this
-round of work existed.
+### Dashboard and settings
+
+| # | Do this | Expect |
+|:--|:--|:--|
+| 14 | Launch the app fresh | The **Recent** tab, empty, with a bottom bar of Recent / Favourites / Mine |
+| 15 | Open `fixture.md`, then press back | A card headed **Fixture** (from the front matter, not the filename) with an excerpt and "fixture.md · just now" |
+| 16 | Open a second document, then back | Two cards, most recent first |
+| 17 | Tap the star on one, switch to **Favourites** | Only that document is listed; it is still in Recent too |
+| 18 | Force-stop and relaunch | Both cards and the star survived |
+| 19 | Long-press a card → **Remove from the list** | The card goes; the other stays |
+| 20 | Open a document, type without saving, press back | A blue **Unsaved draft** card at the top of Recent. Tap it — your text is there |
+| 21 | **Mine** → Theme → Dark, on a device set to Light | The whole app goes dark. Watch for a **white flash** on cold start, and check the status-bar icons stay legible |
+| 22 | **Mine** → Text size → Large | The document and editor grow; the top bar and bottom tabs do **not** |
+| 23 | **Mine** → Load images from the web → Never, then open `fixture.md` | "Image not loaded" where the photo was |
+| 24 | **Mine** → Language → 简体中文 | Everything switches, **including the "just now" / "2 小时前" timestamps**, and you stay on the Mine tab rather than being bounced to Recent |
+| 25 | With Chinese active, open a document you had edited but not saved | The unsaved text is still there — the language change recreates the Activity, and that must not cost you anything |
+| 26 | Android 13+: Settings → Apps → MdView → Language | MdView is listed, with English and 简体中文. Change it there and the app agrees |
+
+Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
+survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
+tell me.
 
 ---
 
@@ -151,8 +182,9 @@ adb install -r app-release-signed.apk
 
 Worth doing at least once even though the debug build passes: the release path runs R8,
 and the Markdown parser discovers commonmark extension classes reflectively. Keep rules
-for those are in `app\proguard-rules.pro`. Walk items 1–5 of the checklist on the signed
-release build; if a node type silently vanishes from the preview, a keep rule is missing.
+for those are in `app\proguard-rules.pro`. Walk items 1–5 and 14–17 of the checklist on the
+signed release build; if a node type silently vanishes from the preview, or the dashboard
+comes up empty after opening something, a keep rule is missing.
 
 If you later want a build for distribution, generating the release keystore is yours to
 do — it must not end up in this repository.
@@ -163,9 +195,10 @@ do — it must not end up in this repository.
 
 Both follow from the "full image support" decision, and neither is a defect:
 
-- **The app requests `INTERNET`.** Opening an untrusted `.md` will silently contact
-  whatever servers its images point at — ordinary tracking-pixel behaviour. A "load
-  remote images?" prompt could gate this, but it is not built.
+- **The app requests `INTERNET`** and now also `ACCESS_NETWORK_STATE`. Opening an
+  untrusted `.md` can contact whatever servers its images point at — ordinary
+  tracking-pixel behaviour. **Mine → Load images from the web** gates this now; the
+  default is still Always, so change it if that matters to you.
 - **Relative image paths do not resolve.** `![](./img/a.png)` cannot load, because picking
   a file through the picker grants access to that one file and not the folder around it.
   Only `https://`, `content://`, `file://` and `data:` work. Fixing this means moving to
@@ -178,10 +211,14 @@ Both follow from the "full image support" decision, and neither is a defect:
 Cut from scope deliberately, listed so nothing here reads as an oversight:
 
 TalkBack heading semantics · tooltips on the icon-only top-bar actions · monochrome
-launcher icon · backup and data-extraction rules · task-list (`- [ ]`) rendering ·
-link-scheme restriction · localization beyond English · a remote-image privacy gate ·
-sibling-file image resolution · CI.
+launcher icon · task-list (`- [ ]`) rendering · link-scheme restriction · sibling-file
+image resolution · search within the document list · sorting the list by anything other
+than recency · CI.
 
-`CLAUDE.md` also records the standing scope boundary: no cloud sync, export, formatting
-toolbar, syntax highlighting or recents list. Additions there are new scope to agree on,
-not gaps to fill.
+Delivered since this list was first written: backup and data-extraction rules, the
+remote-image privacy gate, and localisation (English + 简体中文).
+
+`CLAUDE.md` records the standing scope boundary: preview and source editing plus the
+dashboard and settings, with no cloud sync, export, formatting toolbar, syntax
+highlighting, or file browsing beyond what the picker grants. Additions there are new
+scope to agree on, not gaps to fill.
