@@ -1,5 +1,6 @@
 package com.mdview.ui.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Star
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mdview.R
 import com.mdview.data.LibraryEntry
+import com.mdview.ui.theme.LocalSkin
 
 /**
  * Stable handles for the instrumented tests.
@@ -67,12 +70,16 @@ fun DocumentCard(
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val skin = LocalSkin.current
 
     Card(
         modifier = modifier.fillMaxWidth().testTag(DashboardTags.card(entry.uri)),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        shape = RoundedCornerShape(skin.shape.medium.dp),
+        colors = CardDefaults.cardColors(containerColor = skin.colors.surface),
+        // A hairline instead of a shadow: shadows read as 2021 Material, and on a dark
+        // skin they are invisible anyway, which is where the surface ladder earns its keep.
+        border = BorderStroke(1.dp, skin.colors.border),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
@@ -80,12 +87,12 @@ fun DocumentCard(
                     onClick = { if (unavailable) menuOpen = true else onOpen() },
                     onLongClick = { menuOpen = true },
                 )
-                .padding(start = 16.dp, top = 12.dp, end = 4.dp, bottom = 12.dp),
+                .padding(start = 16.dp, top = 14.dp, end = 4.dp, bottom = 14.dp),
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.Article,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = skin.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, end = 12.dp).size(20.dp),
             )
 
@@ -99,6 +106,7 @@ fun DocumentCard(
                 Text(
                     text = entry.heading,
                     style = MaterialTheme.typography.titleSmall,
+                    color = skin.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -106,7 +114,7 @@ fun DocumentCard(
                     Text(
                         text = entry.excerpt,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = skin.colors.textSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp),
@@ -119,7 +127,7 @@ fun DocumentCard(
                         relativeTime(entry.lastOpened),
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = skin.colors.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 6.dp),
@@ -146,9 +154,9 @@ fun DocumentCard(
                             }
                         ),
                         tint = if (entry.isFavorite) {
-                            MaterialTheme.colorScheme.primary
+                            skin.colors.accent
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            skin.colors.textMuted
                         },
                     )
                 }
@@ -197,7 +205,7 @@ private fun CardNotice(entry: LibraryEntry, unavailable: Boolean) {
     Text(
         text = stringResource(notice),
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.error,
+        color = LocalSkin.current.colors.danger,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(top = 2.dp),
@@ -207,12 +215,14 @@ private fun CardNotice(entry: LibraryEntry, unavailable: Boolean) {
 /** The scratch document, which has no file behind it and so no library row either. */
 @Composable
 fun DraftCard(onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val skin = LocalSkin.current
     Card(
         onClick = onOpen,
         modifier = modifier.fillMaxWidth().testTag(DashboardTags.DRAFT_CARD),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
+        shape = RoundedCornerShape(skin.shape.medium.dp),
+        colors = CardDefaults.cardColors(containerColor = skin.colors.accentSubtle),
+        border = BorderStroke(1.dp, skin.colors.accent.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -221,19 +231,19 @@ fun DraftCard(onOpen: () -> Unit, modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.Article,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = skin.colors.accent,
                 modifier = Modifier.padding(end = 12.dp).size(20.dp),
             )
             Column {
                 Text(
                     text = stringResource(R.string.unsaved_draft),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = skin.colors.textPrimary,
                 )
                 Text(
                     text = stringResource(R.string.unsaved_draft_body),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = skin.colors.textSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),

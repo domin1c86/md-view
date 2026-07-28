@@ -1,5 +1,6 @@
 package com.mdview
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
@@ -9,7 +10,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.mdview.data.LibraryCodec
 import com.mdview.data.LibraryEntry
 import com.mdview.ui.dashboard.DashboardTags
@@ -36,19 +36,10 @@ class DashboardTest {
     @get:Rule
     val chain: RuleChain = RuleChain
         .outerRule(object : ExternalResource() {
-            override fun before() {
-                val context = InstrumentationRegistry.getInstrumentation().targetContext
-                File(context.filesDir, "drafts").deleteRecursively()
-                File(context.filesDir, "settings.txt").delete()
-
+            override fun before() = TestStorage.wipe { context ->
                 val library = File(context.filesDir, "library")
-                library.deleteRecursively()
                 library.mkdirs()
                 File(library, "entries.tsv").writeText(LibraryCodec.encode(SEEDED))
-
-                // The stores hold their contents in memory and outlive a single test,
-                // so the files have to be rebuilt into them before the Activity starts.
-                MdViewApplication.from(context).resetForTests()
             }
         })
         .around(rule)
@@ -190,4 +181,14 @@ class DashboardTest {
 
         val SEEDED = listOf(NOTES, THOUGHTS, SHARED)
     }
+    @Test
+    fun onlyOneNavigationSurfaceCarriesEachTabTag() {
+        // The rail and the bottom bar both tag their items, and only one of the two is
+        // ever composed. If that stopped being true, every onNodeWithTag(tab(...)) in
+        // this suite and in MdViewAppTest would start failing on ambiguity instead.
+        DashboardTab.entries.forEach { entry ->
+            rule.onAllNodesWithTag(DashboardTags.tab(entry.name)).assertCountEquals(1)
+        }
+    }
+
 }

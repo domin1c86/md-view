@@ -1,20 +1,30 @@
 package com.mdview.ui.dashboard
 
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,28 +40,50 @@ import com.mdview.data.ReadingSize
 import com.mdview.data.RemoteImagePolicy
 import com.mdview.data.Settings
 import com.mdview.data.ThemeChoice
+import com.mdview.data.isDark
+import com.mdview.ui.theme.LocalSkin
+import com.mdview.ui.theme.Skin
 
 /** Test handles for the settings rows, whose labels repeat across groups. */
 object SettingsTags {
     const val PANEL = "settings:panel"
     fun option(value: Enum<*>) = "settings:option:${value::class.simpleName}:${value.name}"
     const val DYNAMIC_COLOR = "settings:dynamicColor"
+
+    fun skin(dark: Boolean, id: String) = "settings:skin:${if (dark) "dark" else "light"}:$id"
+    fun deleteSkin(id: String) = "settings:deleteSkin:$id"
+    const val IMPORT_SKIN = "settings:importSkin"
+    const val IMPORT_ERROR = "settings:importError"
 }
 
 /**
  * Preferences.
  *
  * Everything here is applied the moment it is tapped rather than behind a save button —
- * with five settings and instant feedback on four of them, a confirm step would be
- * ceremony for its own sake.
+ * with instant feedback on almost all of it, a confirm step would be ceremony for its
+ * own sake.
+ *
+ * **The root must stay a single vertically scrolling [Column].** `SettingsTest` reaches
+ * rows with `performScrollTo()`, which needs one scroll container and no lazy list.
  */
 @Composable
 fun MineTab(
     settings: Settings,
+    skins: List<Skin>,
+    systemDark: Boolean,
     onChange: ((Settings) -> Settings) -> Unit,
     onChangeLanguage: (LanguageChoice) -> Unit,
+    onImportSkin: () -> Unit,
+    onDeleteSkin: (Skin) -> Unit,
+    importError: Int?,
     modifier: Modifier = Modifier,
 ) {
+    // Material You is only offered from Android 12; below it the switch would be a
+    // control that visibly does nothing, so the skins are always live there.
+    val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val dynamicOn = dynamicAvailable && settings.dynamicColor
+    val dark = settings.theme.isDark(systemDark)
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -67,10 +99,8 @@ fun MineTab(
                 onSelect = { choice -> onChange { it.copy(theme = choice) } },
             )
 
-            // Dynamic colour is a no-op below Android 12, so the switch is not offered
-            // there rather than shipping a control that visibly does nothing.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                HorizontalDivider()
+            if (dynamicAvailable) {
+                HorizontalDivider(color = LocalSkin.current.colors.divider)
                 SwitchRow(
                     title = R.string.setting_dynamic_color,
                     body = R.string.setting_dynamic_color_body,
@@ -80,7 +110,37 @@ fun MineTab(
                 )
             }
 
-            HorizontalDivider()
+            SettingsLabel(
+                title = R.string.setting_skin_light,
+                // The caption explains the dimming rather than leaving the user to guess
+                // why a row full of swatches stopped responding.
+                body = if (dynamicOn) R.string.setting_skin_dynamic_note else R.string.setting_skin_body,
+                // The live half of the picker is emphasised so it is obvious which of the
+                // two the app is currently drawing.
+                emphasised = !dark,
+            )
+            SkinGallery(
+                skins = skins.filterNot { it.dark },
+                selectedId = settings.lightSkinId,
+                dark = false,
+                enabled = !dynamicOn,
+                onSelect = { skin -> onChange { it.copy(lightSkinId = skin.id) } },
+                onDelete = onDeleteSkin,
+            )
+
+            SettingsLabel(title = R.string.setting_skin_dark, emphasised = dark)
+            SkinGallery(
+                skins = skins.filter { it.dark },
+                selectedId = settings.darkSkinId,
+                dark = true,
+                enabled = !dynamicOn,
+                onSelect = { skin -> onChange { it.copy(darkSkinId = skin.id) } },
+                onDelete = onDeleteSkin,
+            )
+
+            ImportSkinRow(onImportSkin, importError)
+
+            HorizontalDivider(color = LocalSkin.current.colors.divider)
             OptionRow(
                 title = R.string.setting_language,
                 options = LanguageChoice.entries,
@@ -119,14 +179,88 @@ fun MineTab(
                 Text(
                     text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.bodyLarge,
+                    color = LocalSkin.current.colors.textPrimary,
                 )
                 Text(
                     text = stringResource(R.string.about_body),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LocalSkin.current.colors.textSecondary,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
+        }
+    }
+}
+
+/**
+ * The "Import a skin…" affordance and whatever went wrong last time.
+ *
+ * The failure is reported inline rather than through a snackbar because the dashboard's
+ * `Scaffold` has no `SnackbarHost`, and adding one for a single message would be more
+ * plumbing than the message is worth.
+ */
+@Composable
+private fun ImportSkinRow(onImportSkin: () -> Unit, importError: Int?) {
+    val skin = LocalSkin.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onImportSkin)
+            .testTag(SettingsTags.IMPORT_SKIN)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.FileDownload,
+            contentDescription = null,
+            tint = skin.colors.accent,
+            modifier = Modifier.padding(end = 14.dp).size(22.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.import_skin),
+                style = MaterialTheme.typography.bodyLarge,
+                color = skin.colors.accent,
+            )
+            Text(
+                text = stringResource(R.string.import_skin_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = skin.colors.textMuted,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+
+    importError?.let { message ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .background(
+                    skin.colors.danger.copy(alpha = 0.10f),
+                    RoundedCornerShape(skin.shape.small.dp),
+                )
+                .border(
+                    1.dp,
+                    skin.colors.danger.copy(alpha = 0.35f),
+                    RoundedCornerShape(skin.shape.small.dp),
+                )
+                .testTag(SettingsTags.IMPORT_ERROR)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ErrorOutline,
+                contentDescription = null,
+                tint = skin.colors.danger,
+                modifier = Modifier.padding(end = 10.dp).size(18.dp),
+            )
+            Text(
+                text = stringResource(message),
+                style = MaterialTheme.typography.bodySmall,
+                color = skin.colors.danger,
+            )
         }
     }
 }
@@ -136,13 +270,34 @@ private fun SettingsGroup(titleRes: Int, content: @Composable () -> Unit) {
     Text(
         text = stringResource(titleRes),
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp),
+        color = LocalSkin.current.colors.accent,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 4.dp),
     )
     content()
 }
 
-/** A titled group of radio buttons — the shape three of the five settings share. */
+/** The title-and-caption pair that sits above a control which is not an [OptionRow]. */
+@Composable
+private fun SettingsLabel(title: Int, body: Int? = null, emphasised: Boolean = false) {
+    val skin = LocalSkin.current
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+        Text(
+            text = stringResource(title),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (emphasised) skin.colors.textPrimary else skin.colors.textSecondary,
+        )
+        body?.let {
+            Text(
+                text = stringResource(it),
+                style = MaterialTheme.typography.bodySmall,
+                color = skin.colors.textMuted,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+/** A titled group of radio buttons — the shape three of the settings share. */
 @Composable
 private fun <T : Enum<T>> OptionRow(
     title: Int,
@@ -152,17 +307,19 @@ private fun <T : Enum<T>> OptionRow(
     onSelect: (T) -> Unit,
     body: Int? = null,
 ) {
+    val skin = LocalSkin.current
     Column(Modifier.padding(top = 8.dp, bottom = 8.dp)) {
         Text(
             text = stringResource(title),
             style = MaterialTheme.typography.bodyLarge,
+            color = skin.colors.textPrimary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         body?.let {
             Text(
                 text = stringResource(it),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = skin.colors.textMuted,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
             )
         }
@@ -180,10 +337,18 @@ private fun <T : Enum<T>> OptionRow(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = option == selected, onClick = null)
+                    RadioButton(
+                        selected = option == selected,
+                        onClick = null,
+                        colors = RadioButtonDefaults.colors(
+                            selectedColor = skin.colors.accent,
+                            unselectedColor = skin.colors.textMuted,
+                        ),
+                    )
                     Text(
                         text = stringResource(label(option)),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = skin.colors.textPrimary,
                         modifier = Modifier.padding(start = 12.dp),
                     )
                 }
@@ -200,6 +365,7 @@ private fun SwitchRow(
     tag: String,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val skin = LocalSkin.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -209,15 +375,26 @@ private fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(text = stringResource(title), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = stringResource(title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = skin.colors.textPrimary,
+            )
             Text(
                 text = stringResource(body),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = skin.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp),
             )
         }
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = skin.colors.onAccent,
+                checkedTrackColor = skin.colors.accent,
+            ),
+        )
     }
 }
 

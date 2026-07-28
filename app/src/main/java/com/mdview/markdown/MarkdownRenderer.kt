@@ -1,6 +1,7 @@
 package com.mdview.markdown
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import com.mdview.R
+import com.mdview.ui.theme.LocalMonoTextStyle
+import com.mdview.ui.theme.LocalSkin
 import org.commonmark.ext.front.matter.YamlFrontMatterBlock
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableCell
@@ -64,6 +67,9 @@ import org.commonmark.node.ThematicBreak
 private val LocalListDepth: ProvidableCompositionLocal<Int> = compositionLocalOf { 0 }
 
 private val BulletGlyphs = listOf("•", "◦", "▪")
+
+/** Set by a blockquote so its children pick up the quote colour instead of body text. */
+private val LocalBodyColor: ProvidableCompositionLocal<Color?> = compositionLocalOf { null }
 
 /**
  * Renders every top-level block of [root] into a [Column].
@@ -98,7 +104,7 @@ fun MarkdownBlock(node: Node, modifier: Modifier = Modifier) {
         is FencedCodeBlock -> CodeBlock(node.literal, node.info, modifier)
         is IndentedCodeBlock -> CodeBlock(node.literal, info = null, modifier = modifier)
         is TableBlock -> MarkdownTable(node, modifier)
-        is ThematicBreak -> HorizontalDivider(modifier.fillMaxWidth().padding(vertical = 8.dp))
+        is ThematicBreak -> ThematicRule(modifier)
         // Raw HTML is shown verbatim rather than silently dropped, so nothing in
         // the source goes missing from the reader's view.
         is HtmlBlock -> CodeBlock(node.literal, info = null, modifier = modifier)
@@ -149,19 +155,16 @@ private fun MarkdownHeading(heading: Heading, modifier: Modifier = Modifier) {
         4 -> typography.titleMedium
         5 -> typography.titleSmall
         else -> typography.titleSmall
-    }.copy(fontWeight = FontWeight.Bold)
+    }.copy(fontWeight = FontWeight(LocalSkin.current.type.headingWeight))
 
-    val color = if (heading.level >= 6) {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
+    val skin = LocalSkin.current
+    val color = if (heading.level >= 6) skin.colors.textSecondary else skin.colors.textPrimary
 
     Column(modifier = modifier.padding(top = 8.dp)) {
         MarkdownText(heading, style = style, color = color)
         // A rule under the top two levels gives long documents a visible spine.
         if (heading.level <= 2) {
-            HorizontalDivider(Modifier.padding(top = 6.dp))
+            HorizontalDivider(Modifier.padding(top = 6.dp), color = skin.colors.divider)
         }
     }
 }
@@ -171,7 +174,7 @@ private fun MarkdownText(
     parent: Node,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge,
-    color: Color = MaterialTheme.colorScheme.onSurface,
+    color: Color = LocalBodyColor.current ?: LocalSkin.current.colors.textPrimary,
     textAlign: TextAlign? = null,
 ) {
     val styles = rememberInlineStyles()
@@ -199,7 +202,7 @@ private fun MarkdownList(list: ListBlock, modifier: Modifier = Modifier) {
                     text = marker,
                     modifier = Modifier.widthIn(min = 28.dp),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LocalSkin.current.colors.textSecondary,
                 )
                 CompositionLocalProvider(LocalListDepth provides depth + 1) {
                     MarkdownChildBlocks(item, Modifier.weight(1f))
@@ -209,48 +212,59 @@ private fun MarkdownList(list: ListBlock, modifier: Modifier = Modifier) {
     }
 }
 
+/** The horizontal rule, at full token opacity rather than a divider's default alpha. */
+@Composable
+private fun ThematicRule(modifier: Modifier = Modifier) {
+    HorizontalDivider(
+        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        color = LocalSkin.current.colors.divider,
+    )
+}
+
 @Composable
 private fun MarkdownBlockQuote(quote: BlockQuote, modifier: Modifier = Modifier) {
+    val skin = LocalSkin.current
     Row(modifier = modifier.height(IntrinsicSize.Min)) {
         Box(
             Modifier
-                .width(4.dp)
+                .width(3.dp)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                .clip(RoundedCornerShape(skin.shape.small.dp))
+                .background(skin.colors.quoteBar)
         )
-        MarkdownChildBlocks(quote, Modifier.padding(start = 12.dp))
+        CompositionLocalProvider(LocalBodyColor provides skin.colors.quoteText) {
+            MarkdownChildBlocks(quote, Modifier.padding(start = 14.dp))
+        }
     }
 }
 
 @Composable
 private fun CodeBlock(literal: String, info: String?, modifier: Modifier = Modifier) {
     val scrollState = rememberScrollState()
+    val skin = LocalSkin.current
+    val shape = RoundedCornerShape(skin.shape.medium.dp)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(12.dp)
+            .clip(shape)
+            .background(skin.colors.codeBackground)
+            .border(1.dp, skin.colors.border, shape)
+            .padding(14.dp)
     ) {
         if (!info.isNullOrBlank()) {
             Text(
                 text = info.trim().substringBefore(' '),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 6.dp),
+                color = skin.colors.textMuted,
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
         Text(
             // Code lines must not reflow, so the block scrolls sideways instead.
             text = literal.trimEnd('\n'),
             modifier = Modifier.horizontalScroll(scrollState),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = MonospaceFamily,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = LocalMonoTextStyle.current,
+            color = skin.colors.code,
             softWrap = false,
         )
     }
@@ -286,7 +300,7 @@ private fun MarkdownImage(image: Image) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 320.dp)
-            .clip(RoundedCornerShape(8.dp)),
+            .clip(RoundedCornerShape(LocalSkin.current.shape.medium.dp)),
         contentScale = ContentScale.Fit,
         alignment = Alignment.Center,
         loading = { ImageNotice(stringResource(R.string.image_loading)) },
@@ -294,17 +308,24 @@ private fun MarkdownImage(image: Image) {
     )
 }
 
-/** Stands in for an image that is still arriving, or never will. */
+/**
+ * Stands in for an image that is still arriving, or never will.
+ *
+ * Clipped to the same radius as the image it replaces -- it used not to be, so a blocked
+ * image swapped a rounded picture for a hard-edged grey slab.
+ */
 @Composable
 private fun ImageNotice(text: String) {
+    val skin = LocalSkin.current
     Text(
         text = text,
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(RoundedCornerShape(skin.shape.medium.dp))
+            .background(skin.colors.surfaceSunken)
             .padding(vertical = 24.dp, horizontal = 12.dp),
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = skin.colors.textMuted,
         textAlign = TextAlign.Center,
     )
 }
@@ -317,31 +338,41 @@ private fun MarkdownTable(table: TableBlock, modifier: Modifier = Modifier) {
     }
     if (rows.isEmpty()) return
 
-    val outline = MaterialTheme.colorScheme.outline
+    val skin = LocalSkin.current
+    val shape = RoundedCornerShape(skin.shape.medium.dp)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .clip(shape)
+            .background(skin.colors.surface)
+            .border(1.dp, skin.colors.tableBorder, shape)
     ) {
         rows.forEachIndexed { rowIndex, row ->
-            if (rowIndex > 0) HorizontalDivider(color = outline.copy(alpha = 0.4f))
+            if (rowIndex > 0) HorizontalDivider(color = skin.colors.tableBorder)
             val cells = row.children().filterIsInstance<TableCell>()
+            val isHeaderRow = cells.any { it.isHeader }
             Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .background(if (isHeaderRow) skin.colors.tableHeader else Color.Transparent),
                 verticalAlignment = Alignment.Top,
             ) {
                 cells.forEachIndexed { cellIndex, cell ->
                     if (cellIndex > 0) {
-                        Box(Modifier.width(1.dp).fillMaxHeight().background(outline.copy(alpha = 0.4f)))
+                        Box(Modifier.width(1.dp).fillMaxHeight().background(skin.colors.tableBorder))
                     }
                     // Columns share the width evenly; cell text wraps rather than
                     // forcing the whole table to scroll.
                     MarkdownText(
                         parent = cell,
-                        modifier = Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp),
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 9.dp),
                         style = MaterialTheme.typography.bodyMedium.let {
-                            if (cell.isHeader) it.copy(fontWeight = FontWeight.Bold) else it
+                            if (cell.isHeader) {
+                                it.copy(fontWeight = FontWeight(skin.type.headingWeight))
+                            } else {
+                                it
+                            }
                         },
                         textAlign = when (cell.alignment) {
                             TableCell.Alignment.CENTER -> TextAlign.Center
@@ -357,25 +388,27 @@ private fun MarkdownTable(table: TableBlock, modifier: Modifier = Modifier) {
 
 @Composable
 private fun rememberInlineStyles(): InlineStyles {
-    val colors = MaterialTheme.colorScheme
+    val skin = LocalSkin.current
+    val monoSize = LocalMonoTextStyle.current.fontSize
     val imageTemplate = stringResource(R.string.image_placeholder)
-    return remember(colors, imageTemplate) {
+    return remember(skin, monoSize, imageTemplate) {
+        val colors = skin.colors
         InlineStyles(
             code = SpanStyle(
                 fontFamily = MonospaceFamily,
-                fontSize = 14.sp,
-                background = colors.surfaceVariant,
-                color = colors.onSurfaceVariant,
+                fontSize = monoSize,
+                background = colors.codeBackground,
+                color = colors.code,
             ),
             link = TextLinkStyles(
-                style = SpanStyle(color = colors.primary, textDecoration = TextDecoration.Underline),
+                style = SpanStyle(color = colors.link, textDecoration = TextDecoration.Underline),
                 pressedStyle = SpanStyle(
-                    color = colors.primary,
-                    background = colors.primary.copy(alpha = 0.12f),
+                    color = colors.linkPressed,
+                    background = colors.accentSubtle,
                     textDecoration = TextDecoration.Underline,
                 ),
             ),
-            image = SpanStyle(color = colors.onSurfaceVariant, fontStyle = FontStyle.Italic),
+            image = SpanStyle(color = colors.textMuted, fontStyle = FontStyle.Italic),
             imageLabel = { alt -> imageTemplate.format(alt) },
         )
     }

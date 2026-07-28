@@ -1,18 +1,24 @@
 package com.mdview.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.mdview.markdown.MarkdownBlock
 import com.mdview.markdown.MarkdownParser
 import com.mdview.markdown.children
+import com.mdview.ui.theme.LocalSkin
 
 /**
  * Renders [source] as formatted Markdown.
@@ -30,14 +36,22 @@ fun PreviewScreen(
     scrollState: LazyListState = rememberLazyListState(),
 ) {
     val blocks = remember(source) { MarkdownParser.parse(source).children() }
+    val skin = LocalSkin.current
 
-    SelectionContainer(modifier = modifier) {
-        LazyColumn(
-            state = scrollState,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(blocks.size) { index -> MarkdownBlock(blocks[index]) }
+    SelectionContainer(modifier = modifier.fillMaxSize().background(skin.colors.canvas)) {
+        // Prose stops being readable much past 70 characters a line, so on a tablet the
+        // column is centred and capped rather than stretched across the whole window.
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.widthIn(max = MAX_READING_WIDTH).fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(blocks.size) { index -> MarkdownBlock(blocks[index]) }
+            }
         }
     }
 }
+
+private val MAX_READING_WIDTH = 720.dp

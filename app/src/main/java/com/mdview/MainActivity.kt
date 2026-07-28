@@ -14,23 +14,31 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mdview.data.AppLocale
 import com.mdview.data.LanguageChoice
 import com.mdview.data.SettingsStore
-import com.mdview.data.ThemeChoice
+import com.mdview.data.SkinStore
+import com.mdview.data.isDark
 import com.mdview.ui.MdViewRoot
 import com.mdview.ui.theme.MdViewTheme
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels { MainViewModel.factory(this) }
 
     private val settingsStore: SettingsStore get() = MdViewApplication.from(this).settings
+
+    private val skinStore: SkinStore get() = MdViewApplication.from(this).skins
 
     /**
      * Below API 33 this is the only place the in-app language can be applied -- it runs
@@ -52,17 +60,26 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by settingsStore.state.collectAsStateWithLifecycle()
+            val imported by skinStore.imported.collectAsStateWithLifecycle()
             val dark = settings.theme.isDark(isSystemInDarkTheme())
 
-            LaunchedEffect(dark) { applyWindowChrome(dark) }
+            // `imported` is a dependency rather than noise: importing or deleting a skin
+            // has to re-resolve the active one, or the panel shows a new skin selected
+            // while the app carries on drawing the old one.
+            val skin = remember(settings.lightSkinId, settings.darkSkinId, dark, imported) {
+                skinStore.resolve(if (dark) settings.darkSkinId else settings.lightSkinId, dark)
+            }
 
-            MdViewTheme(darkTheme = dark, dynamicColor = settings.dynamicColor) {
+            LaunchedEffect(dark, skin.id, settings.dynamicColor) { applyWindowChrome(dark) }
+
+            MdViewTheme(skin = skin, dynamicColor = settings.dynamicColor) {
                 Surface(Modifier.fillMaxSize()) {
                     MdViewRoot(
                         viewModel = viewModel,
                         settings = settings.copy(
                             language = AppLocale.current(this, settings.language),
                         ),
+                        systemDark = isSystemInDarkTheme(),
                         onChangeSettings = settingsStore::update,
                         onChangeLanguage = ::changeLanguage,
                     )
@@ -103,9 +120,27 @@ class MainActivity : ComponentActivity() {
     private fun applyWindowChrome(dark: Boolean) {
         val bars = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
         enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
-        window.setBackgroundDrawable(
-            (if (dark) WINDOW_DARK else WINDOW_LIGHT).toInt().toDrawable()
-        )
+        window.setBackgroundDrawable(windowBackground(dark).toArgb().toDrawable())
+    }
+
+    /**
+     * The colour behind the first frame, taken from whatever will actually be drawn.
+     *
+     * This used to be two hardcoded constants hand-mirrored from the palette, which drifted
+     * the moment the palette moved and were simply wrong under Material You. Both branches
+     * here are ordinary function calls -- `dynamicLightColorScheme` is not `@Composable` --
+     * so this still runs before `super.onCreate`, which is where it has to run for
+     * `enableEdgeToEdge` to pick the right status-bar icons.
+     */
+    private fun windowBackground(dark: Boolean): ComposeColor {
+        val settings = settingsStore.current
+        if (settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val scheme =
+                if (dark) dynamicDarkColorScheme(this) else dynamicLightColorScheme(this)
+            return scheme.background
+        }
+        val id = if (dark) settings.darkSkinId else settings.lightSkinId
+        return skinStore.resolve(id, dark).colors.canvas
     }
 
     /**
@@ -123,17 +158,4 @@ class MainActivity : ComponentActivity() {
     private fun systemIsDark(): Boolean =
         resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
             Configuration.UI_MODE_NIGHT_YES
-
-    private companion object {
-        // Matches LightBackground / DarkBackground; this only shows before Compose draws.
-        const val WINDOW_LIGHT = 0xFFFDFBFF
-        const val WINDOW_DARK = 0xFF1B1B1F
-    }
-}
-
-/** Whether this choice means a dark scheme, given what the system is currently doing. */
-private fun ThemeChoice.isDark(systemDark: Boolean): Boolean = when (this) {
-    ThemeChoice.System -> systemDark
-    ThemeChoice.Light -> false
-    ThemeChoice.Dark -> true
 }

@@ -1,64 +1,54 @@
 package com.mdview.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
-private val LightColors = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    primaryContainer = LightPrimaryContainer,
-    onPrimaryContainer = LightOnPrimaryContainer,
-    secondary = LightSecondary,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightOutline,
-)
-
-private val DarkColors = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = DarkOnPrimaryContainer,
-    secondary = DarkSecondary,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkOutline,
-)
-
+/**
+ * Applies [skin] to both Material 3 and the app's own tokens.
+ *
+ * When [dynamicColor] is on and the platform supports it, the wallpaper wins -- but the
+ * skin is rebuilt from the wallpaper scheme rather than simply bypassed, so a code block
+ * or a table follows Material You too. Skipping that step leaves half the screen themed
+ * from the wallpaper and the other half from a skin the user thought they had overridden.
+ *
+ * [skin] still supplies shape and type in that case, since a wallpaper implies neither.
+ */
 @Composable
 fun MdViewTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    skin: Skin,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val context = LocalContext.current
+    val effective = remember(skin, dynamicColor) {
+        if (!dynamicColor || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            skin
+        } else {
+            val scheme = if (skin.dark) {
+                dynamicDarkColorScheme(context)
+            } else {
+                dynamicLightColorScheme(context)
+            }
+            Skin.fromColorScheme(scheme, skin.dark, template = skin)
         }
-
-        darkTheme -> DarkColors
-        else -> LightColors
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = MdViewTypography,
-        content = content,
-    )
+    val colorScheme = remember(effective) { effective.toColorScheme() }
+    val shapes = remember(effective) { effective.toShapes() }
+    val typography = remember(effective) { mdViewTypography(effective.type) }
+
+    CompositionLocalProvider(LocalSkin provides effective) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = typography,
+            shapes = shapes,
+            content = content,
+        )
+    }
 }

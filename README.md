@@ -7,7 +7,7 @@ their heading and a couple of lines of the text. Three tabs along the bottom:
 
 - **Recent** — everything you have opened, newest first.
 - **Favourites** — the ones you starred.
-- **Mine** — theme, language, reading text size and image loading.
+- **Mine** — theme, skins, language, reading text size and image loading.
 
 Tap a card and you get the document itself, in one of two modes:
 
@@ -58,15 +58,31 @@ authored in Notepad still looks untouched to the tools that made it.
 
 ### Settings
 
-The **Mine** tab carries five preferences, applied the moment you tap them:
+The **Mine** tab carries these preferences, applied the moment you tap them:
 
 | Setting | Notes |
 |:--|:--|
 | Theme | System / Light / Dark, independent of what the device is doing |
-| Colours from your wallpaper | Material You. Hidden below Android 12, where it does nothing |
+| Light skin, Dark skin | Which skin to use in each mode. See below |
+| Colours from your wallpaper | Material You. Overrides both skins; off by default, and hidden below Android 12 where it does nothing |
 | Language | System / English / 简体中文. On Android 13+ this is the same setting the system exposes under Apps → Language |
-| Text size | Scales the document and the editor, not the app's own controls |
+| Text size | Scales the document, the editor and code blocks, not the app's own controls |
 | Load images from the web | Never / unmetered networks only / always |
+
+### Skins
+
+A skin is the whole palette: not just the accent, but the code-block background, the
+blockquote bar, table rules, links and the four surface layers the app is built from.
+Eight ship with the app — Paper, Cobalt, Sepia and Solarized Light for light mode; Ink,
+Midnight, Nord and Solarized Dark for dark — and each is held to WCAG AA contrast by an
+automated test.
+
+You choose one skin for light mode and one for dark, so *Follow the system* flips between
+your two choices rather than between two fixed themes.
+
+You can also **import your own** as a JSON file, through Mine → Import a skin…
+[`docs/SKINS.md`](docs/SKINS.md) is the full specification: every colour token and what
+draws it, the typography and shape rules, a worked example, and the validation limits.
 
 ### Images
 

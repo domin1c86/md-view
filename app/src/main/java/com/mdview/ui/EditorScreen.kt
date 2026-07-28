@@ -1,19 +1,18 @@
 package com.mdview.ui
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.mdview.ui.theme.LocalMonoTextStyle
+import com.mdview.ui.theme.LocalSkin
 
 /**
  * A plain-text view of the Markdown source. Deliberately unadorned: no toolbar,
@@ -28,20 +27,20 @@ fun EditorScreen(
     scrollState: ScrollState,
     modifier: Modifier = Modifier,
 ) {
-    val textStyle = LocalTextStyle.current.copy(
-        fontFamily = FontFamily.Monospace,
-        fontSize = 15.sp,
-        lineHeight = 22.sp,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
+    val skin = LocalSkin.current
+    // Sizes come from LocalMonoTextStyle rather than being written here. Hardcoding them
+    // overrode the scaled style, so the reading-size setting used to work in the preview
+    // and do nothing whatsoever in the editor.
+    val textStyle = LocalMonoTextStyle.current.copy(color = skin.colors.textPrimary)
 
     BasicTextField(
         state = state,
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .background(skin.colors.canvas)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         textStyle = textStyle,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        cursorBrush = SolidColor(skin.colors.accent),
         // MultiLine keeps Enter inserting a newline instead of closing the keyboard.
         lineLimits = TextFieldLineLimits.MultiLine(),
         scrollState = scrollState,

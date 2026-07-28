@@ -13,14 +13,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.mdview.ui.dashboard.DashboardTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import java.io.File
 
 /**
  * Drives the real Activity: reach the editor from the dashboard, type Markdown, flip to
@@ -32,26 +30,10 @@ class MdViewAppTest {
 
     private val rule = createAndroidComposeRule<MainActivity>()
 
-    /**
-     * The library, drafts and settings all outlive a process by design, which also means
-     * they outlive a test. Wiping them has to happen before the Activity starts -- by the
-     * time an `@Before` method runs, the ViewModel has already restored a draft -- so the
-     * cleanup is chained outside the Compose rule rather than written as a setup method.
-     *
-     * Deleting the files is not enough on its own: the stores are process-wide singletons
-     * holding their contents in memory, and instrumentation runs every test in one
-     * process, so they have to be rebuilt too.
-     */
     @get:Rule
     val chain: RuleChain = RuleChain
         .outerRule(object : ExternalResource() {
-            override fun before() {
-                val context = InstrumentationRegistry.getInstrumentation().targetContext
-                File(context.filesDir, "drafts").deleteRecursively()
-                File(context.filesDir, "library").deleteRecursively()
-                File(context.filesDir, "settings.txt").delete()
-                MdViewApplication.from(context).resetForTests()
-            }
+            override fun before() = TestStorage.wipe()
         })
         .around(rule)
 

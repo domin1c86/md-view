@@ -71,6 +71,21 @@
     <string name="about_version">版本 %1$s</string>
     <string name="about_body">一个 Markdown 阅读与编辑工具。文件只留在你的设备上，不会上传。</string>
 
+    <string name="setting_skin_light">浅色皮肤</string>
+    <string name="setting_skin_dark">深色皮肤</string>
+    <string name="setting_skin_body">决定文档和应用界面的配色。</string>
+    <string name="setting_skin_dynamic_note">关闭壁纸取色后即可选择皮肤。</string>
+    <string name="import_skin">导入皮肤\u2026</string>
+    <string name="import_skin_body">一个 .json 皮肤文件。格式请参阅皮肤指南。</string>
+    <string name="remove_skin">移除皮肤</string>
+    <string name="skin_error_format">该文件不是本应用能读取的皮肤</string>
+    <string name="skin_error_too_large">皮肤文件过大</string>
+    <string name="skin_error_id">皮肤的 id 缺失或不可用</string>
+    <string name="skin_error_name">皮肤没有名称</string>
+    <string name="skin_error_base">皮肤所基于的皮肤在本应用中不存在</string>
+    <string name="skin_error_reserved">内置皮肤已占用该 id</string>
+    <string name="skin_error_full">皮肤数量已达上限，请先移除一个。</string>
+
     <!-- Relative times on the document cards -->
     <string name="time_just_now">刚刚</string>
     <string name="time_yesterday">昨天</string>

@@ -45,12 +45,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mdview.MainViewModel
 import com.mdview.Mode
 import com.mdview.R
+import com.mdview.ui.theme.LocalSkin
 import com.mdview.ui.theme.ReadingTypography
 
 /**
@@ -123,16 +127,25 @@ fun MdViewApp(
     // enabled handler registered last.
     BackHandler { viewModel.goToDashboard() }
 
+    val skin = LocalSkin.current
+
     Scaffold(
         modifier = modifier,
+        containerColor = skin.colors.canvas,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
+                    val name = state.fileName ?: stringResource(R.string.untitled)
+                    // The bullet stays part of the title's text rather than becoming a
+                    // dot composable: it is the accessibility signal for "unsaved", and
+                    // MdViewAppTest reads it as text. Only its colour is new.
                     Text(
-                        text = buildString {
-                            append(state.fileName ?: stringResource(R.string.untitled))
-                            if (state.isDirty) append(" •")
+                        text = buildAnnotatedString {
+                            append(name)
+                            if (state.isDirty) {
+                                withStyle(SpanStyle(color = skin.colors.danger)) { append(" •") }
+                            }
                         },
                         maxLines = 1,
                         overflow = TextOverflow.MiddleEllipsis,
@@ -207,7 +220,10 @@ fun MdViewApp(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = skin.colors.canvas,
+                    titleContentColor = skin.colors.textPrimary,
+                    navigationIconContentColor = skin.colors.textSecondary,
+                    actionIconContentColor = skin.colors.textSecondary,
                 ),
             )
         },

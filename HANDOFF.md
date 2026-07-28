@@ -154,6 +154,24 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 25 | With Chinese active, open a document you had edited but not saved | The unsaved text is still there — the language change recreates the Activity, and that must not cost you anything |
 | 26 | Android 13+: Settings → Apps → MdView → Language | MdView is listed, with English and 简体中文. Change it there and the app agrees |
 
+### Skins and the adaptive shell
+
+| # | Do this | Expect |
+|:--|:--|:--|
+| 27 | **Mine** → scroll to **Light skin** / **Dark skin** | Eight swatches across the two galleries, each previewed in its own colours, with a tick on the active one |
+| 28 | Pick **Cobalt** for light and **Midnight** for dark, then flip Theme between Light and Dark | The whole app changes, *including code blocks, tables, blockquote bars and links* — not just the bars and buttons. That split is the thing most likely to be wrong |
+| 29 | Cold-start the app under Midnight (`adb shell am force-stop com.mdview`, relaunch) | **No pale flash before the first frame.** The window background now comes from the active skin; this is what used to be two hardcoded constants |
+| 30 | Turn on **Colours from your wallpaper** (Android 12+) | Both skin galleries dim, with a caption explaining why. The document — code blocks included — follows the wallpaper, not the old skin |
+| 31 | Turn it off again | The galleries come back live and your chosen skins return |
+| 32 | **Mine** → **Import a skin…**, pick a valid `.json` (write one from `docs/SKINS.md`) | It appears in the right gallery, selectable, with a **×** to remove it |
+| 33 | Import a truncated file, a 5 MB file, and one whose `"id"` is `"../../x"` | Three *different* readable messages inline under the import row, and the skin you were using stays active |
+| 34 | Select an imported skin, then remove it with its **×** | Falls back to Paper or Ink; nothing is left half-applied |
+| 35 | Import a file whose `"id"` is `"midnight"` | Refused — a built-in cannot be shadowed |
+| 36 | Widen the window past 640 dp: a tablet, an unfolded foldable, or `adb shell wm size 1600x1000` | The three tabs move from the bottom bar to a **rail** on the left, with the **+** at its top. The selected tab survives the switch |
+| 37 | Go back to a phone width (`adb shell wm size reset`) | The bottom bar returns; still exactly one set of tabs on screen |
+| 38 | **Mine** → Text size → Large, then open a document with a code block and switch to source | Code blocks **and the editor** grow. They used to ignore this setting entirely |
+| 39 | Switch to 简体中文 and revisit Mine | The skin section, the import row and any error message are all translated |
+
 Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
 survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
 tell me.

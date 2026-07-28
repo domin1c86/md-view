@@ -81,12 +81,21 @@ class SettingsStore(
         private const val KEY_REMOTE_IMAGES = "remoteImages"
         private const val KEY_READING_SIZE = "readingSize"
 
+        // Appended after the original five on purpose. SettingsStoreTest patches the
+        // encoded text by replacing the literal "readingSize=Medium", which silently
+        // becomes a no-op -- a test that passes for the wrong reason -- if that line
+        // ever moves or is renamed.
+        private const val KEY_LIGHT_SKIN = "lightSkin"
+        private const val KEY_DARK_SKIN = "darkSkin"
+
         fun encode(settings: Settings): String = buildString {
             appendLine("$KEY_THEME=${settings.theme.name}")
             appendLine("$KEY_LANGUAGE=${settings.language.name}")
             appendLine("$KEY_DYNAMIC_COLOR=${settings.dynamicColor}")
             appendLine("$KEY_REMOTE_IMAGES=${settings.remoteImages.name}")
             appendLine("$KEY_READING_SIZE=${settings.readingSize.name}")
+            appendLine("$KEY_LIGHT_SKIN=${settings.lightSkinId}")
+            appendLine("$KEY_DARK_SKIN=${settings.darkSkinId}")
         }
 
         /**
@@ -110,8 +119,15 @@ class SettingsStore(
                     ?: defaults.dynamicColor,
                 remoteImages = values[KEY_REMOTE_IMAGES].toEnum(defaults.remoteImages),
                 readingSize = values[KEY_READING_SIZE].toEnum(defaults.readingSize),
+                // Validated on the way in, not just on the way out: a skin id becomes a
+                // filename, so a hand-edited "../../databases/x" must never survive here.
+                lightSkinId = values[KEY_LIGHT_SKIN].toSkinId(defaults.lightSkinId),
+                darkSkinId = values[KEY_DARK_SKIN].toSkinId(defaults.darkSkinId),
             )
         }
+
+        private fun String?.toSkinId(fallback: String): String =
+            this?.takeIf(SkinCodec::isValidId) ?: fallback
 
         private inline fun <reified T : Enum<T>> String?.toEnum(fallback: T): T =
             enumValues<T>().firstOrNull { it.name == this } ?: fallback

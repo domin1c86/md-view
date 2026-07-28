@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.mdview.data.ReadingSize
 import com.mdview.data.RemoteImagePolicy
 import com.mdview.data.Settings
@@ -20,7 +19,6 @@ import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import java.io.File
 
 /** The Mine tab: that a preference sticks, and that it reaches the store. */
 @RunWith(AndroidJUnit4::class)
@@ -31,20 +29,13 @@ class SettingsTest {
     @get:Rule
     val chain: RuleChain = RuleChain
         .outerRule(object : ExternalResource() {
-            override fun before() {
-                val context = InstrumentationRegistry.getInstrumentation().targetContext
-                File(context.filesDir, "drafts").deleteRecursively()
-                File(context.filesDir, "library").deleteRecursively()
-                File(context.filesDir, "settings.txt").delete()
-                MdViewApplication.from(context).resetForTests()
-            }
+            override fun before() = TestStorage.wipe()
         })
         .around(rule)
 
-    private val settings
-        get() = MdViewApplication
-            .from(InstrumentationRegistry.getInstrumentation().targetContext)
-            .settings
+    private val settings get() = MdViewApplication.from(TestStorage.context).settings
+
+    private val skinStore get() = MdViewApplication.from(TestStorage.context).skins
 
     private fun openSettings() {
         rule.onNodeWithTag(DashboardTags.tab(DashboardTab.Mine.name)).performClick()

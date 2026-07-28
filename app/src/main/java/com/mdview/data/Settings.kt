@@ -29,7 +29,31 @@ enum class ReadingSize(val scale: Float) {
 data class Settings(
     val theme: ThemeChoice = ThemeChoice.System,
     val language: LanguageChoice = LanguageChoice.System,
-    val dynamicColor: Boolean = true,
+    /**
+     * Off by default, unlike before skins existed.
+     *
+     * Material You overrides the chosen skin wholesale, so leaving it on would mean a
+     * fresh install on Android 12+ never showed the skin it says is selected. Installs
+     * that already wrote `dynamicColor=true` keep it -- only the default moved.
+     */
+    val dynamicColor: Boolean = false,
     val remoteImages: RemoteImagePolicy = RemoteImagePolicy.Always,
     val readingSize: ReadingSize = ReadingSize.Medium,
+    /** Skin used when the resolved mode is light. See `docs/SKINS.md`. */
+    val lightSkinId: String = "paper",
+    /** Skin used when the resolved mode is dark. */
+    val darkSkinId: String = "ink",
 )
+
+/**
+ * Whether this choice means a dark scheme, given what the system is currently doing.
+ *
+ * Lives here rather than in the Activity because three callers need it: the window
+ * chrome before `onCreate`, the theme during composition, and the settings panel, which
+ * has to know which of the two skin pickers is the live one.
+ */
+fun ThemeChoice.isDark(systemDark: Boolean): Boolean = when (this) {
+    ThemeChoice.System -> systemDark
+    ThemeChoice.Light -> false
+    ThemeChoice.Dark -> true
+}
