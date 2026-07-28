@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Edit
@@ -51,15 +52,24 @@ import com.mdview.MainViewModel
 import com.mdview.Mode
 import com.mdview.R
 
-/** What the user asked for while the document still had unsaved changes. */
-private enum class PendingAction { Open, New, Exit }
+/**
+ * What the user asked for while the document still had unsaved changes.
+ *
+ * Only actions that *replace* the buffer need confirming. Leaving for the dashboard does
+ * not: the draft is written on the way out and the document comes back with its unsaved
+ * text intact, so there is nothing to warn about.
+ */
+private enum class PendingAction { Open, New }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun MdViewApp(
+    viewModel: MainViewModel,
+    onOpenPicker: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val activity = LocalActivity.current
 
     var pendingAction by remember { mutableStateOf<PendingAction?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -70,25 +80,18 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val previewScrollState = rememberLazyListState()
     val editorScrollState = rememberScrollState()
 
-    // Many providers report .md as an unknown binary type, so accept that too --
-    // filtering on text/* alone hides the very files this app exists to open.
-    val openLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let(viewModel::open) }
-
     val createLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/markdown")
     ) { uri -> uri?.let(viewModel::saveAs) }
 
-    fun launchOpen() = openLauncher.launch(arrayOf("text/*", "application/octet-stream"))
-
     fun requestOpen() {
-        if (state.isDirty) pendingAction = PendingAction.Open else launchOpen()
+        if (state.isDirty) pendingAction = PendingAction.Open else onOpenPicker()
     }
 
     fun requestNew() {
         if (state.isDirty) pendingAction = PendingAction.New else viewModel.newDocument()
     }
+
 
     state.message?.let { message ->
         // Resolved during composition rather than inside the effect, so the string
@@ -113,7 +116,10 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    BackHandler(enabled = state.isDirty) { pendingAction = PendingAction.Exit }
+    // The document screen's only back handler, composed here rather than at the root so
+    // it cannot fight with the dashboard's tab handling -- the dispatcher runs whichever
+    // enabled handler registered last.
+    BackHandler { viewModel.goToDashboard() }
 
     Scaffold(
         modifier = modifier,
@@ -129,6 +135,14 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                         maxLines = 1,
                         overflow = TextOverflow.MiddleEllipsis,
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = viewModel::goToDashboard) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.back_to_list),
+                        )
+                    }
                 },
                 actions = {
                     val editing = state.mode == Mode.Edit
@@ -155,7 +169,12 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                             ),
                         )
                     }
-                    IconButton(onClick = { viewModel.save() }, enabled = state.isDirty && state.uri != null) {
+                    IconButton(
+                        onClick = { viewModel.save() },
+                        // A read-only grant means the write will be refused, so the
+                        // button says so now rather than after ten minutes of typing.
+                        enabled = state.isDirty && state.uri != null && state.canWrite,
+                    ) {
                         Icon(Icons.Outlined.Save, contentDescription = stringResource(R.string.save))
                     }
                     IconButton(onClick = { menuExpanded = true }) {
@@ -230,9 +249,8 @@ fun MdViewApp(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     val action = pendingAction
                     pendingAction = null
                     when (action) {
-                        PendingAction.Open -> launchOpen()
+                        PendingAction.Open -> onOpenPicker()
                         PendingAction.New -> viewModel.newDocument()
-                        PendingAction.Exit -> activity?.finish()
                         null -> Unit
                     }
                 }) { Text(stringResource(R.string.discard)) }

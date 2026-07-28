@@ -25,6 +25,7 @@ import com.mdview.data.LoadedDocument
 import com.mdview.data.PersistedAccess
 import com.mdview.data.UnreadableDocumentException
 import com.mdview.markdown.DocumentSummary
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,6 +79,12 @@ class MainViewModel(
     private val drafts: DraftStore,
     private val library: LibraryStore,
     private val savedState: SavedStateHandle,
+    /**
+     * Where Markdown gets parsed for a card's excerpt. Injectable because
+     * `Dispatchers.Default` is not driven by the test scheduler, so work sent there
+     * outlives `advanceUntilIdle` and the assertions read stale state.
+     */
+    private val parsing: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
     /** The single source of truth for the document text, shared by both modes. */
@@ -216,7 +223,7 @@ class MainViewModel(
         text: String,
         access: PersistedAccess,
     ) {
-        val summary = withContext(Dispatchers.Default) { DocumentSummary.of(text) }
+        val summary = withContext(parsing) { DocumentSummary.of(text) }
         library.record(
             LibraryEntry(
                 uri = uri.toString(),
@@ -354,7 +361,7 @@ class MainViewModel(
 
                     // The card's excerpt came from the text as it was opened, so a save
                     // is the moment it goes stale.
-                    val summary = withContext(Dispatchers.Default) { DocumentSummary.of(content) }
+                    val summary = withContext(parsing) { DocumentSummary.of(content) }
                     if (adopt) {
                         recordInLibrary(uri, name, content, documents.persistAccess(uri))
                     } else {

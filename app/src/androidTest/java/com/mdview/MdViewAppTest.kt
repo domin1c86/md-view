@@ -3,14 +3,18 @@ package com.mdview
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.mdview.ui.dashboard.DashboardTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
@@ -19,9 +23,9 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * Drives the real Activity: type Markdown in the source editor, flip to preview and
- * check the rendered result. Covers both MVP features without touching the file
- * picker, which needs a human.
+ * Drives the real Activity: reach the editor from the dashboard, type Markdown, flip to
+ * preview and check the rendered result. Covers everything except the file picker, which
+ * needs a human.
  */
 @RunWith(AndroidJUnit4::class)
 class MdViewAppTest {
@@ -29,10 +33,14 @@ class MdViewAppTest {
     private val rule = createAndroidComposeRule<MainActivity>()
 
     /**
-     * Autosaved drafts outlive the process by design, which also means they outlive a
-     * test. Wiping them has to happen before the Activity starts -- by the time an
-     * `@Before` method runs, the ViewModel has already restored one -- so the cleanup
-     * is chained outside the Compose rule rather than written as a setup method.
+     * The library, drafts and settings all outlive a process by design, which also means
+     * they outlive a test. Wiping them has to happen before the Activity starts -- by the
+     * time an `@Before` method runs, the ViewModel has already restored a draft -- so the
+     * cleanup is chained outside the Compose rule rather than written as a setup method.
+     *
+     * Deleting the files is not enough on its own: the stores are process-wide singletons
+     * holding their contents in memory, and instrumentation runs every test in one
+     * process, so they have to be rebuilt too.
      */
     @get:Rule
     val chain: RuleChain = RuleChain
@@ -40,28 +48,127 @@ class MdViewAppTest {
             override fun before() {
                 val context = InstrumentationRegistry.getInstrumentation().targetContext
                 File(context.filesDir, "drafts").deleteRecursively()
+                File(context.filesDir, "library").deleteRecursively()
+                File(context.filesDir, "settings.txt").delete()
+                MdViewApplication.from(context).resetForTests()
             }
         })
         .around(rule)
 
     private fun label(resId: Int): String = rule.activity.getString(resId)
 
+    private fun tab(tab: DashboardTab) =
+        rule.onNodeWithTag(DashboardTags.tab(tab.name)).performClick()
+
+    private fun pressBack() {
+        // Navigation is a coroutine, so the destination may still be settling. Pressing
+        // back before the target screen has composed its handler finishes the Activity
+        // instead, and the test then fails with no hierarchy to look at.
+        rule.waitForIdle()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.waitForIdle()
+    }
+
+    /** The dashboard is the launch screen, so every editor test starts by leaving it. */
+    private fun openEditor() {
+        rule.onNodeWithContentDescription(label(R.string.add_document)).performClick()
+        rule.onNodeWithText(label(R.string.new_document)).performClick()
+    }
+
     private fun typeSource(markdown: String) {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNode(hasSetTextAction()).performTextInput(markdown)
         rule.onNodeWithContentDescription(label(R.string.show_preview)).performClick()
     }
 
+    // --- Dashboard ---------------------------------------------------------------
+
     @Test
-    fun emptyStateIsShownBeforeAnyDocumentIsOpen() {
-        rule.onNodeWithText(label(R.string.empty_title)).assertIsDisplayed()
-        rule.onNodeWithText(label(R.string.open_a_markdown_file)).assertIsDisplayed()
+    fun theDashboardIsTheLaunchScreen() {
+        rule.onNodeWithText(label(R.string.no_recent_title)).assertIsDisplayed()
+        rule.onNodeWithText(label(R.string.no_recent_body)).assertIsDisplayed()
     }
 
     @Test
-    fun savingIsDisabledUntilThereIsSomethingToSave() {
-        rule.onNodeWithContentDescription(label(R.string.save)).assertIsNotEnabled()
+    fun allThreeTabsAreOffered() {
+        DashboardTab.entries.forEach {
+            rule.onNodeWithTag(DashboardTags.tab(it.name)).assertIsDisplayed()
+        }
     }
+
+    @Test
+    fun favouritesStartsEmptyAndSaysSo() {
+        tab(DashboardTab.Favorites)
+
+        rule.onNodeWithText(label(R.string.no_favorites_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun theSelectedTabIsMarkedAsSuch() {
+        tab(DashboardTab.Mine)
+
+        rule.onNodeWithTag(DashboardTags.tab(DashboardTab.Mine.name)).assertIsSelected()
+        rule.onNodeWithTag(DashboardTags.tab(DashboardTab.Recent.name)).assertIsNotSelected()
+    }
+
+    @Test
+    fun backFromASecondaryTabReturnsToRecent() {
+        tab(DashboardTab.Favorites)
+
+        pressBack()
+
+        rule.onNodeWithText(label(R.string.no_recent_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun aNewDocumentReachesTheEditor() {
+        openEditor()
+
+        rule.onNode(hasSetTextAction()).assertIsDisplayed()
+    }
+
+    @Test
+    fun leavingTheEditorReturnsToTheDashboard() {
+        openEditor()
+
+        rule.onNodeWithContentDescription(label(R.string.back_to_list)).performClick()
+
+        rule.onNodeWithTag(DashboardTags.tab(DashboardTab.Recent.name)).assertIsDisplayed()
+    }
+
+    @Test
+    fun backLeavesTheEditorToo() {
+        openEditor()
+
+        pressBack()
+
+        rule.onNodeWithTag(DashboardTags.tab(DashboardTab.Recent.name)).assertIsDisplayed()
+    }
+
+    @Test
+    fun unsavedScratchWorkIsOfferedBackOnTheDashboard() {
+        openEditor()
+        rule.onNode(hasSetTextAction()).performTextInput("something worth keeping")
+
+        rule.onNodeWithContentDescription(label(R.string.back_to_list)).performClick()
+
+        // Leaving is not destructive -- the draft is written on the way out and the
+        // dashboard offers it back rather than silently dropping it.
+        rule.onNodeWithTag(DashboardTags.DRAFT_CARD).assertIsDisplayed()
+    }
+
+    @Test
+    fun theOfferedDraftOpensWithItsTextIntact() {
+        openEditor()
+        rule.onNode(hasSetTextAction()).performTextInput("something worth keeping")
+        rule.onNodeWithContentDescription(label(R.string.back_to_list)).performClick()
+
+        rule.onNodeWithTag(DashboardTags.DRAFT_CARD).performClick()
+
+        rule.onNodeWithText("something worth keeping").assertIsDisplayed()
+    }
+
+    // --- Rendering ---------------------------------------------------------------
 
     @Test
     fun headingsAndListsRenderInPreview() {
@@ -90,8 +197,18 @@ class MdViewAppTest {
     }
 
     @Test
+    fun frontMatterDoesNotBecomeAHeading() {
+        typeSource("---\ntitle: Metadata\n---\n\n# Actual heading\n")
+
+        rule.onNodeWithText("Actual heading").assertIsDisplayed()
+        rule.onNodeWithText("title: Metadata").assertDoesNotExist()
+    }
+
+    // --- Editing -----------------------------------------------------------------
+
+    @Test
     fun editingMarksTheDocumentDirty() {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNode(hasSetTextAction()).performTextInput("draft")
 
         rule.onNodeWithText("${label(R.string.untitled)} •").assertIsDisplayed()
@@ -106,16 +223,15 @@ class MdViewAppTest {
     }
 
     @Test
-    fun frontMatterDoesNotBecomeAHeading() {
-        typeSource("---\ntitle: Metadata\n---\n\n# Actual heading\n")
+    fun savingIsDisabledUntilThereIsSomethingToSave() {
+        openEditor()
 
-        rule.onNodeWithText("Actual heading").assertIsDisplayed()
-        rule.onNodeWithText("title: Metadata").assertDoesNotExist()
+        rule.onNodeWithContentDescription(label(R.string.save)).assertIsNotEnabled()
     }
 
     @Test
     fun undoIsOfferedOnlyOnceThereIsSomethingToUndo() {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNodeWithContentDescription(label(R.string.undo)).assertIsNotEnabled()
 
         rule.onNode(hasSetTextAction()).performTextInput("a mistake")
@@ -125,7 +241,7 @@ class MdViewAppTest {
 
     @Test
     fun undoTakesTheTypedTextBackOut() {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNode(hasSetTextAction()).performTextInput("a mistake")
 
         rule.onNodeWithContentDescription(label(R.string.undo)).performClick()
@@ -136,7 +252,7 @@ class MdViewAppTest {
 
     @Test
     fun redoPutsItBack() {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNode(hasSetTextAction()).performTextInput("second thoughts")
         rule.onNodeWithContentDescription(label(R.string.undo)).performClick()
 
@@ -147,13 +263,15 @@ class MdViewAppTest {
 
     @Test
     fun undoAndRedoAreHiddenInPreview() {
+        typeSource("anything at all")
+
         rule.onNodeWithContentDescription(label(R.string.undo)).assertDoesNotExist()
         rule.onNodeWithContentDescription(label(R.string.redo)).assertDoesNotExist()
     }
 
     @Test
     fun startingANewDocumentEmptiesTheEditor() {
-        rule.onNodeWithContentDescription(label(R.string.show_source)).performClick()
+        openEditor()
         rule.onNode(hasSetTextAction()).performTextInput("throwaway")
 
         // Unsaved text, so the discard dialog stands between here and the empty buffer.
@@ -162,12 +280,5 @@ class MdViewAppTest {
         rule.onNodeWithText(label(R.string.discard)).performClick()
 
         rule.onNodeWithText("throwaway").assertDoesNotExist()
-    }
-
-    @Test
-    fun theEmptyStateOffersANewDocument() {
-        rule.onNodeWithText(label(R.string.start_a_new_document)).performClick()
-
-        rule.onNode(hasSetTextAction()).assertIsDisplayed()
     }
 }

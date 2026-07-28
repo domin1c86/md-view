@@ -66,7 +66,7 @@ class MainViewModelTest {
     }
 
     private fun viewModel(savedState: SavedStateHandle = SavedStateHandle()) =
-        MainViewModel(documents, drafts, library, savedState)
+        MainViewModel(documents, drafts, library, savedState, parsing = dispatcher)
 
     /** A SavedStateHandle as it comes back after a process death on the document screen. */
     private fun onDocument(uri: Uri? = null) = SavedStateHandle(

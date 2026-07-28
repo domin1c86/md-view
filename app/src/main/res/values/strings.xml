@@ -17,6 +17,45 @@
     <string name="empty_title">No document open</string>
     <string name="empty_body">Pick a Markdown file to read it here, or switch to the editor to work on the source.</string>
 
+    <!-- Dashboard -->
+    <string name="tab_recent">Recent</string>
+    <string name="tab_favorites">Favourites</string>
+    <string name="tab_mine">Mine</string>
+    <string name="back_to_list">Back to the document list</string>
+    <string name="add_document">Add a document</string>
+    <string name="add_to_favorites">Add to favourites</string>
+    <string name="remove_from_favorites">Remove from favourites</string>
+    <string name="remove_from_list">Remove from the list</string>
+    <string name="document_actions">Actions for this document</string>
+    <string name="unsaved_draft">Unsaved draft</string>
+    <string name="unsaved_draft_body">Work you started without a file. Tap to carry on.</string>
+    <string name="document_unavailable">No longer available on this device</string>
+    <string name="document_from_another_app">Opened from another app — may not reopen later</string>
+    <string name="document_read_only">Read-only</string>
+    <string name="no_recent_title">Nothing here yet</string>
+    <string name="no_recent_body">Documents you open show up here, so you can pick up where you left off.</string>
+    <string name="no_favorites_title">No favourites yet</string>
+    <string name="no_favorites_body">Star a document in Recent and it will be waiting for you here.</string>
+    <string name="removed_from_list">Removed from the list</string>
+
+    <!-- Relative times on the document cards -->
+    <string name="time_just_now">just now</string>
+    <string name="time_yesterday">yesterday</string>
+    <plurals name="time_minutes_ago">
+        <item quantity="one">%d minute ago</item>
+        <item quantity="other">%d minutes ago</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <!-- Filename, then how long ago it was opened. e.g. "notes.md · 2 hours ago" -->
+    <string name="card_meta">%1$s · %2$s</string>
+
     <string name="unsaved_title">Discard unsaved changes?</string>
     <string name="unsaved_body">This document has changes that have not been saved.</string>
     <string name="discard">Discard</string>
