@@ -8,7 +8,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mdview.data.DocumentSource
 import com.mdview.data.DraftStore
+import com.mdview.data.LibraryState
+import com.mdview.data.LibraryStore
 import com.mdview.data.LoadedDocument
+import com.mdview.data.PersistedAccess
 import com.mdview.markdown.DocumentCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,9 +33,9 @@ import java.io.File
 import java.io.FileNotFoundException
 
 /**
- * Covers open, save and dirty-tracking -- the logic where a user's unsaved work is
- * either kept or lost. Instrumented rather than a JVM test because [Uri] has no working
- * implementation off-device, and every one of these paths is keyed by one.
+ * Covers open, save, dirty-tracking and navigation restore -- the logic where a user's
+ * unsaved work is either kept or lost. Instrumented rather than a JVM test because [Uri]
+ * has no working implementation off-device, and every one of these paths is keyed by one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -42,6 +45,7 @@ class MainViewModelTest {
     private lateinit var directory: File
     private lateinit var documents: FakeDocuments
     private lateinit var drafts: DraftStore
+    private lateinit var library: LibraryStore
 
     private val uri: Uri = Uri.parse("content://test/notes.md")
 
@@ -49,9 +53,10 @@ class MainViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         val cache = InstrumentationRegistry.getInstrumentation().targetContext.cacheDir
-        directory = File(cache, "draft-test-${System.nanoTime()}")
+        directory = File(cache, "vm-test-${System.nanoTime()}")
         documents = FakeDocuments()
-        drafts = DraftStore(directory, dispatcher)
+        drafts = DraftStore(File(directory, "drafts"), dispatcher)
+        library = LibraryStore(File(directory, "library"), dispatcher)
     }
 
     @After
@@ -61,7 +66,15 @@ class MainViewModelTest {
     }
 
     private fun viewModel(savedState: SavedStateHandle = SavedStateHandle()) =
-        MainViewModel(documents, drafts, savedState)
+        MainViewModel(documents, drafts, library, savedState)
+
+    /** A SavedStateHandle as it comes back after a process death on the document screen. */
+    private fun onDocument(uri: Uri? = null) = SavedStateHandle(
+        buildMap {
+            put("destination", Destination.Document.name)
+            uri?.let { put("open_document_uri", it.toString()) }
+        }
+    )
 
     /** Mutating a [androidx.compose.foundation.text.input.TextFieldState] only reaches
      *  `snapshotFlow` once the global snapshot has been applied. */
@@ -81,6 +94,18 @@ class MainViewModelTest {
         assertEquals("# On disk\n", model.textState.text.toString())
         assertEquals(uri, model.uiState.value.uri)
         assertFalse(model.uiState.value.isDirty)
+    }
+
+    @Test
+    fun openingMovesToTheDocumentScreen() = runTest(dispatcher) {
+        documents.put(uri, "text")
+        val model = viewModel()
+        assertEquals(Destination.Dashboard, model.uiState.value.destination)
+
+        model.open(uri)
+        advanceUntilIdle()
+
+        assertEquals(Destination.Document, model.uiState.value.destination)
     }
 
     @Test
@@ -126,6 +151,93 @@ class MainViewModelTest {
         assertEquals("work in progress", second.textState.text.toString())
         assertTrue(second.uiState.value.isDirty)
         assertEquals(R.string.draft_restored, second.uiState.value.message?.resId)
+    }
+
+    @Test
+    fun sittingOnTheDashboardDoesNotDeleteAnUnsavedScratchDocument() = runTest(dispatcher) {
+        drafts.save(DraftStore.UNTITLED_KEY, "notes I never saved anywhere")
+        advanceUntilIdle()
+
+        // snapshotFlow emits as soon as it is collected, so the autosave debounce fires
+        // with an empty buffer shortly after launch. Ungated, it would decide the empty
+        // text matches the equally-empty savedText and clear the draft -- destroying the
+        // previous session's work while the user looks at the dashboard.
+        viewModel()
+        advanceUntilIdle()
+
+        assertEquals("notes I never saved anywhere", drafts.load(DraftStore.UNTITLED_KEY))
+    }
+
+    @Test
+    fun aScratchDocumentIsOfferedOnTheDashboardRatherThanForcedOpen() = runTest(dispatcher) {
+        drafts.save(DraftStore.UNTITLED_KEY, "half a thought")
+        advanceUntilIdle()
+
+        val model = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(Destination.Dashboard, model.uiState.value.destination)
+        assertTrue(model.hasUntitledDraft.value)
+        assertEquals("", model.textState.text.toString())
+    }
+
+    @Test
+    fun theOfferedScratchDocumentOpensOnRequest() = runTest(dispatcher) {
+        drafts.save(DraftStore.UNTITLED_KEY, "half a thought")
+        advanceUntilIdle()
+        val model = viewModel()
+        advanceUntilIdle()
+
+        model.openUntitledDraft()
+        advanceUntilIdle()
+
+        assertEquals("half a thought", model.textState.text.toString())
+        assertEquals(Destination.Document, model.uiState.value.destination)
+        assertTrue(model.uiState.value.isDirty)
+    }
+
+    @Test
+    fun deathOnTheDocumentScreenRestoresTheOpenFile() = runTest(dispatcher) {
+        documents.put(uri, "on disk")
+
+        val model = viewModel(onDocument(uri))
+        advanceUntilIdle()
+
+        assertEquals(Destination.Document, model.uiState.value.destination)
+        assertEquals("on disk", model.textState.text.toString())
+    }
+
+    @Test
+    fun deathOnTheDocumentScreenRestoresAnUntitledDocument() = runTest(dispatcher) {
+        drafts.save(DraftStore.UNTITLED_KEY, "unsaved scratch")
+        advanceUntilIdle()
+
+        val model = viewModel(onDocument())
+        advanceUntilIdle()
+
+        assertEquals(Destination.Document, model.uiState.value.destination)
+        assertEquals("unsaved scratch", model.textState.text.toString())
+    }
+
+    @Test
+    fun deathWithNothingToRestoreFallsBackToTheDashboard() = runTest(dispatcher) {
+        // Killed after navigating to the editor but before typing anything.
+        val model = viewModel(onDocument())
+        advanceUntilIdle()
+
+        assertEquals(Destination.Dashboard, model.uiState.value.destination)
+    }
+
+    @Test
+    fun aColdLaunchOpensNothing() = runTest(dispatcher) {
+        documents.put(uri, "on disk")
+
+        val model = viewModel()
+        advanceUntilIdle()
+
+        assertEquals(Destination.Dashboard, model.uiState.value.destination)
+        assertNull(model.uiState.value.uri)
+        assertEquals("", model.textState.text.toString())
     }
 
     @Test
@@ -201,20 +313,7 @@ class MainViewModelTest {
         assertNull(model.uiState.value.fileName)
         assertFalse(model.uiState.value.isDirty)
         assertEquals(Mode.Edit, model.uiState.value.mode)
-    }
-
-    @Test
-    fun aScratchDocumentIsRecoveredWithNoFileToReopen() = runTest(dispatcher) {
-        val first = viewModel()
-        advanceUntilIdle()
-        first.type("notes I never saved anywhere")
-        advanceUntilIdle()
-
-        val second = viewModel()
-        advanceUntilIdle()
-
-        assertEquals("notes I never saved anywhere", second.textState.text.toString())
-        assertTrue(second.uiState.value.isDirty)
+        assertEquals(Destination.Document, model.uiState.value.destination)
     }
 
     @Test
@@ -226,6 +325,17 @@ class MainViewModelTest {
 
         assertEquals(R.string.error_open_missing, model.uiState.value.message?.resId)
         assertFalse(model.uiState.value.isBusy)
+    }
+
+    @Test
+    fun aFileThatWillNotOpenLeavesTheUserOnTheDashboard() = runTest(dispatcher) {
+        val model = viewModel()
+
+        model.open(Uri.parse("content://test/gone.md"))
+        advanceUntilIdle()
+
+        // Nothing to show, so stranding the user on a blank document screen would be worse.
+        assertEquals(Destination.Dashboard, model.uiState.value.destination)
     }
 
     @Test
@@ -247,9 +357,102 @@ class MainViewModelTest {
         assertEquals("edited", drafts.load(DraftStore.keyFor(uri.toString())))
     }
 
+    @Test
+    fun openingADocumentPutsItInTheLibrary() = runTest(dispatcher) {
+        documents.put(uri, "---\ntitle: Meeting notes\n---\n\nWhat we agreed.\n")
+        val model = viewModel()
+
+        model.open(uri)
+        advanceUntilIdle()
+
+        val entry = (library.state.value as LibraryState.Content).entries.single()
+        assertEquals(uri.toString(), entry.uri)
+        assertEquals("notes.md", entry.displayName)
+        assertEquals("Meeting notes", entry.title)
+        assertEquals("What we agreed.", entry.excerpt)
+    }
+
+    @Test
+    fun savingRefreshesTheCardExcerpt() = runTest(dispatcher) {
+        documents.put(uri, "# Before\n\nOld body.\n")
+        val model = viewModel()
+        model.open(uri)
+        advanceUntilIdle()
+
+        model.type("# After\n\nNew body.\n")
+        advanceUntilIdle()
+        model.save()
+        advanceUntilIdle()
+
+        val entry = (library.state.value as LibraryState.Content).entries.single()
+        assertEquals("After", entry.title)
+        assertEquals("New body.", entry.excerpt)
+    }
+
+    @Test
+    fun aReadOnlyDocumentReportsThatSaveWillNotWork() = runTest(dispatcher) {
+        documents.put(uri, "text")
+        documents.access = PersistedAccess.ReadOnly
+        val model = viewModel()
+
+        model.open(uri)
+        advanceUntilIdle()
+
+        assertFalse(model.uiState.value.canWrite)
+        assertFalse((library.state.value as LibraryState.Content).entries.single().canWrite)
+    }
+
+    @Test
+    fun aDocumentFromAnIntentIsMarkedAsNotPersisted() = runTest(dispatcher) {
+        documents.put(uri, "text")
+        documents.access = PersistedAccess.None
+        val model = viewModel()
+
+        model.open(uri)
+        advanceUntilIdle()
+
+        assertTrue((library.state.value as LibraryState.Content).entries.single().isTransient)
+    }
+
+    @Test
+    fun forgettingADocumentDropsItAndHandsBackItsGrant() = runTest(dispatcher) {
+        documents.put(uri, "text")
+        val model = viewModel()
+        model.open(uri)
+        advanceUntilIdle()
+
+        model.forget(uri.toString())
+        advanceUntilIdle()
+
+        assertEquals(LibraryState.Empty, library.state.value)
+        assertEquals(setOf(uri.toString()), documents.released)
+    }
+
+    @Test
+    fun reopeningTheSameIntentNavigatesWithoutDiscardingEdits() = runTest(dispatcher) {
+        documents.put(uri, "on disk")
+        val model = viewModel()
+        model.openFromIntent(uri)
+        advanceUntilIdle()
+        model.type("unsaved edit")
+        advanceUntilIdle()
+        model.goToDashboard()
+        advanceUntilIdle()
+
+        // Tapping the same file in a file manager again: it must navigate back, but
+        // re-reading would throw away what was typed.
+        model.openFromIntent(uri)
+        advanceUntilIdle()
+
+        assertEquals(Destination.Document, model.uiState.value.destination)
+        assertEquals("unsaved edit", model.textState.text.toString())
+    }
+
     private class FakeDocuments : DocumentSource {
         val stored = mutableMapOf<String, LoadedDocument>()
+        val released = mutableSetOf<String>()
         var writeFailure: Throwable? = null
+        var access: PersistedAccess = PersistedAccess.ReadWrite
 
         fun put(
             uri: Uri,
@@ -272,6 +475,12 @@ class MainViewModelTest {
 
         override suspend fun displayName(uri: Uri): String? = uri.lastPathSegment
 
-        override fun persistAccess(uri: Uri) = Unit
+        override fun persistAccess(uri: Uri): PersistedAccess = access
+
+        override fun releaseAccess(uri: Uri, access: PersistedAccess) {
+            released += uri.toString()
+        }
+
+        override fun persistedUris(): Set<String> = stored.keys
     }
 }

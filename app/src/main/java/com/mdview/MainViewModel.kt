@@ -18,8 +18,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.mdview.data.DocumentRepository
 import com.mdview.data.DocumentSource
 import com.mdview.data.DraftStore
+import com.mdview.data.LibraryEntry
+import com.mdview.data.LibraryState
+import com.mdview.data.LibraryStore
 import com.mdview.data.LoadedDocument
+import com.mdview.data.PersistedAccess
 import com.mdview.data.UnreadableDocumentException
+import com.mdview.markdown.DocumentSummary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,10 +33,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
 
 enum class Mode { Preview, Edit }
+
+/** The app's two top-level screens. */
+enum class Destination { Dashboard, Document }
+
+/** The dashboard's bottom-navigation tabs. */
+enum class DashboardTab { Recent, Favorites, Mine }
 
 /** Something the user can do about a message, offered as a snackbar button. */
 enum class MessageAction { DiscardRestoredDraft }
@@ -48,17 +61,22 @@ private var messageCounter = 0L
 private fun nextId(): Long = ++messageCounter
 
 data class UiState(
+    val destination: Destination = Destination.Dashboard,
+    val tab: DashboardTab = DashboardTab.Recent,
     val uri: Uri? = null,
     val fileName: String? = null,
     val mode: Mode = Mode.Preview,
     val isDirty: Boolean = false,
     val isBusy: Boolean = false,
+    /** False when the document was opened read-only, so Save is refused up front. */
+    val canWrite: Boolean = true,
     val message: UserMessage? = null,
 )
 
 class MainViewModel(
     private val documents: DocumentSource,
     private val drafts: DraftStore,
+    private val library: LibraryStore,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -74,8 +92,25 @@ class MainViewModel(
      *  the read finishes and reaches [uiState]. */
     private var lastRequestedUri: Uri? = null
 
+    /**
+     * Whether a document has actually been opened in this session.
+     *
+     * Guards the autosave. `snapshotFlow` emits its current value the moment it is
+     * collected, so without this the debounce fires half a second after launch with an
+     * empty buffer, sees it match the equally-empty `savedText`, and deletes the
+     * untitled draft -- destroying unsaved work belonging to the *previous* session
+     * while the user is still looking at the dashboard.
+     */
+    private var hasAdoptedDocument = false
+
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    /** Whether there is scratch work with no file behind it, shown as its own card. */
+    private val _hasUntitledDraft = MutableStateFlow(false)
+    val hasUntitledDraft: StateFlow<Boolean> = _hasUntitledDraft.asStateFlow()
+
+    val libraryState: StateFlow<LibraryState> = library.state
 
     private val draftKey: String
         get() = DraftStore.keyFor(_uiState.value.uri?.toString())
@@ -90,45 +125,64 @@ class MainViewModel(
         }
 
         viewModelScope.launch { autosaveDrafts() }
+        viewModelScope.launch { refreshUntitledDraft() }
 
+        // Three ways to come back, not two. Process death on the document screen has to
+        // restore whichever of the two kinds of document was open, and a cold launch has
+        // to load nothing at all -- the dashboard is not a document.
+        val wasOnDocument = savedState.get<String>(KEY_SCREEN) == Destination.Document.name
         val restored = savedState.get<String>(KEY_URI)?.toUri()
-        if (restored != null) {
-            open(restored)
-        } else {
-            // Nothing was open, but there may still be an unsaved scratch document.
-            viewModelScope.launch { restoreUntitledDraft() }
+        when {
+            !wasOnDocument -> Unit
+            restored != null -> open(restored)
+            else -> viewModelScope.launch { restoreUntitledDraft() }
         }
     }
 
-    /** Opens [uri] unless it is already the document on screen. */
+    /**
+     * Opens [uri] handed over by another app.
+     *
+     * The dedupe guards the *reload* only. A rotation re-delivers the same intent to a
+     * fresh Activity and re-reading would discard unsaved edits -- but navigation still
+     * has to happen every time, or tapping the same file again after backing out to the
+     * dashboard would appear to do nothing.
+     */
     fun openFromIntent(uri: Uri) {
-        if (lastRequestedUri != uri) open(uri)
+        if (lastRequestedUri == uri) navigate(Destination.Document) else open(uri)
     }
 
     fun open(uri: Uri) {
         lastRequestedUri = uri
+        hasAdoptedDocument = true
+        // Written before the read rather than after: a process death partway through
+        // would otherwise restore onto the document screen with nothing to show.
+        savedState[KEY_URI] = uri.toString()
+        navigate(Destination.Document)
+
         viewModelScope.launch {
             _uiState.update { it.copy(isBusy = true) }
-            documents.persistAccess(uri)
+            val access = documents.persistAccess(uri)
             runCatching { documents.read(uri) }
                 .onSuccess { document ->
                     format = document
                     savedText = document.text
-                    savedState[KEY_URI] = uri.toString()
 
                     // A draft that differs from what is on disk is work the user did
                     // and never saved. Prefer it, and say so.
                     val draft = drafts.load(DraftStore.keyFor(uri.toString()))
                     val recovered = draft != null && draft != document.text
-                    setText(if (recovered) draft else document.text)
+                    val text = if (recovered) draft else document.text
+                    setText(text)
 
+                    val name = documents.displayName(uri)
                     _uiState.update {
                         it.copy(
                             uri = uri,
-                            fileName = documents.displayName(uri),
+                            fileName = name,
                             mode = Mode.Preview,
                             isDirty = recovered,
                             isBusy = false,
+                            canWrite = access != PersistedAccess.ReadOnly,
                             message = if (recovered) {
                                 UserMessage(
                                     resId = R.string.draft_restored,
@@ -140,28 +194,124 @@ class MainViewModel(
                             },
                         )
                     }
+                    recordInLibrary(uri, name, text, access)
                 }
                 .onFailure { error ->
+                    savedState.remove<String>(KEY_URI)
                     _uiState.update {
-                        it.copy(isBusy = false, message = UserMessage(error.openFailureText()))
+                        it.copy(
+                            destination = Destination.Dashboard,
+                            isBusy = false,
+                            message = UserMessage(error.openFailureText()),
+                        )
                     }
+                    savedState[KEY_SCREEN] = Destination.Dashboard.name
                 }
         }
+    }
+
+    private suspend fun recordInLibrary(
+        uri: Uri,
+        name: String?,
+        text: String,
+        access: PersistedAccess,
+    ) {
+        val summary = withContext(Dispatchers.Default) { DocumentSummary.of(text) }
+        library.record(
+            LibraryEntry(
+                uri = uri.toString(),
+                displayName = name ?: uri.lastPathSegment.orEmpty(),
+                title = summary.title,
+                excerpt = summary.excerpt,
+                lastOpened = System.currentTimeMillis(),
+                canWrite = access != PersistedAccess.ReadOnly,
+                isTransient = access == PersistedAccess.None,
+            )
+        )
     }
 
     /** Starts an empty document, dropping whatever was open. */
     fun newDocument() {
         viewModelScope.launch {
             drafts.clear(draftKey)
+            drafts.clear(DraftStore.UNTITLED_KEY)
             lastRequestedUri = null
+            hasAdoptedDocument = true
             format = LoadedDocument("")
             savedText = ""
             savedState.remove<String>(KEY_URI)
             setText("")
             _uiState.update {
-                it.copy(uri = null, fileName = null, mode = Mode.Edit, isDirty = false, isBusy = false)
+                it.copy(
+                    destination = Destination.Document,
+                    uri = null,
+                    fileName = null,
+                    mode = Mode.Edit,
+                    isDirty = false,
+                    isBusy = false,
+                    canWrite = true,
+                )
             }
+            savedState[KEY_SCREEN] = Destination.Document.name
+            refreshUntitledDraft()
         }
+    }
+
+    /** Picks up the scratch document the dashboard offers when one is waiting. */
+    fun openUntitledDraft() {
+        viewModelScope.launch {
+            hasAdoptedDocument = true
+            lastRequestedUri = null
+            format = LoadedDocument("")
+            savedText = ""
+            savedState.remove<String>(KEY_URI)
+            _uiState.update {
+                it.copy(uri = null, fileName = null, isBusy = false, canWrite = true)
+            }
+            restoreUntitledDraft()
+        }
+    }
+
+    fun showTab(tab: DashboardTab) = _uiState.update { it.copy(tab = tab) }
+
+    /**
+     * Leaves the document screen. The draft is written on the way out rather than left
+     * to the debounce, because the dashboard is where the user goes before closing the
+     * app.
+     */
+    fun goToDashboard() {
+        viewModelScope.launch {
+            persistDraft(textState.text.toString())
+            refreshUntitledDraft()
+            navigate(Destination.Dashboard)
+        }
+    }
+
+    fun setFavorite(uri: String, favorite: Boolean) {
+        viewModelScope.launch { library.setFavorite(uri, favorite) }
+    }
+
+    /** Forgets a document, handing back the URI grant that was taken for it. */
+    fun forget(uri: String) {
+        viewModelScope.launch {
+            val removed = library.remove(uri) ?: return@launch
+            drafts.clear(DraftStore.keyFor(uri))
+            val access = when {
+                removed.isTransient -> PersistedAccess.None
+                removed.canWrite -> PersistedAccess.ReadWrite
+                else -> PersistedAccess.ReadOnly
+            }
+            documents.releaseAccess(uri.toUri(), access)
+        }
+    }
+
+    /** Which library entries can still be reached. Cheap to call, but it is a Binder trip. */
+    suspend fun reachableUris(): Set<String> =
+        withContext(Dispatchers.IO) { documents.persistedUris() }
+
+    private fun navigate(destination: Destination) {
+        _uiState.update { it.copy(destination = destination) }
+        savedState[KEY_SCREEN] = destination.name
     }
 
     /** Writes back to the currently open document. No-op when nothing is open. */
@@ -172,8 +322,10 @@ class MainViewModel(
 
     /** Writes to a newly created document and adopts it as the open one. */
     fun saveAs(uri: Uri) {
-        documents.persistAccess(uri)
+        val access = documents.persistAccess(uri)
+        hasAdoptedDocument = true
         savedState[KEY_URI] = uri.toString()
+        _uiState.update { it.copy(canWrite = access != PersistedAccess.ReadOnly) }
         writeTo(uri, adopt = true)
     }
 
@@ -188,14 +340,25 @@ class MainViewModel(
                     // The text is on disk now, so the draft has nothing left to protect.
                     drafts.clear(previousKey)
                     if (adopt) drafts.clear(DraftStore.keyFor(uri.toString()))
+                    val name = if (adopt) documents.displayName(uri) else _uiState.value.fileName
                     _uiState.update {
                         it.copy(
                             uri = uri,
-                            fileName = if (adopt) documents.displayName(uri) else it.fileName,
+                            fileName = name,
                             isDirty = false,
                             isBusy = false,
                             message = UserMessage(R.string.saved),
                         )
+                    }
+                    refreshUntitledDraft()
+
+                    // The card's excerpt came from the text as it was opened, so a save
+                    // is the moment it goes stale.
+                    val summary = withContext(Dispatchers.Default) { DocumentSummary.of(content) }
+                    if (adopt) {
+                        recordInLibrary(uri, name, content, documents.persistAccess(uri))
+                    } else {
+                        library.updateSummary(uri.toString(), summary.title, summary.excerpt)
                     }
                 }
                 .onFailure { error ->
@@ -224,6 +387,7 @@ class MainViewModel(
                 drafts.clear(draftKey)
                 setText(savedText)
                 _uiState.update { it.copy(isDirty = false) }
+                refreshUntitledDraft()
             }
 
             null -> Unit
@@ -236,7 +400,10 @@ class MainViewModel(
      * goes to the background, which is the moment before it may be killed.
      */
     fun flushDraft() {
-        viewModelScope.launch { persistDraft(textState.text.toString()) }
+        viewModelScope.launch {
+            persistDraft(textState.text.toString())
+            refreshUntitledDraft()
+        }
     }
 
     /**
@@ -250,14 +417,31 @@ class MainViewModel(
     }
 
     private suspend fun persistDraft(current: String) {
+        // Sitting on the dashboard must not touch the drafts of a previous session.
+        if (!hasAdoptedDocument) return
         if (current == savedText) drafts.clear(draftKey) else drafts.save(draftKey, current)
     }
 
+    private suspend fun refreshUntitledDraft() {
+        _hasUntitledDraft.value = !drafts.load(DraftStore.UNTITLED_KEY).isNullOrEmpty()
+    }
+
+    /**
+     * Loads the scratch document, or falls back to the dashboard when there is nothing
+     * to load -- which happens if the process died between navigating to the editor and
+     * typing anything.
+     */
     private suspend fun restoreUntitledDraft() {
-        val draft = drafts.load(DraftStore.UNTITLED_KEY)?.takeIf { it.isNotEmpty() } ?: return
+        val draft = drafts.load(DraftStore.UNTITLED_KEY)?.takeIf { it.isNotEmpty() }
+        if (draft == null) {
+            navigate(Destination.Dashboard)
+            return
+        }
+        hasAdoptedDocument = true
         setText(draft)
         _uiState.update {
             it.copy(
+                destination = Destination.Document,
                 mode = Mode.Edit,
                 isDirty = true,
                 message = UserMessage(
@@ -267,6 +451,7 @@ class MainViewModel(
                 ),
             )
         }
+        savedState[KEY_SCREEN] = Destination.Document.name
     }
 
     /**
@@ -301,16 +486,18 @@ class MainViewModel(
 
     companion object {
         private const val KEY_URI = "open_document_uri"
+        private const val KEY_SCREEN = "destination"
 
         /** Long enough not to write on every keystroke, short enough to survive a kill. */
         private const val AUTOSAVE_DELAY_MS = 500L
 
         fun factory(context: Context): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val app = context.applicationContext
+                val app = MdViewApplication.from(context)
                 MainViewModel(
                     documents = DocumentRepository(app.contentResolver),
                     drafts = DraftStore(File(app.filesDir, "drafts")),
+                    library = app.library,
                     savedState = createSavedStateHandle(),
                 )
             }

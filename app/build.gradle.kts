@@ -52,6 +52,9 @@ android {
                     device = "Pixel 6"
                     apiLevel = 34
                     systemImageSource = "aosp-atd"
+                    // AGP 10 flips the default to arm64-v8a, which this image cannot
+                    // translate; being explicit keeps the tests running either way.
+                    testedAbi = "x86_64"
                 }
             }
         }

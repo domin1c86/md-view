@@ -54,18 +54,43 @@ class DocumentRepository(private val resolver: ContentResolver) : DocumentSource
     }
 
     /**
-     * Holds on to read/write access across process restarts. Best effort: URIs that
-     * arrive from an ACTION_VIEW intent are usually not persistable, and that is fine
-     * -- the document stays readable for as long as this task lives.
+     * Holds on to access across process restarts, and reports how much of it stuck.
+     *
+     * Read and write are requested separately on purpose. Asking for both at once
+     * throws outright when the provider only offered read, which used to leave the app
+     * with *no* persisted grant at all -- the document would open once and then be
+     * unreachable after a restart.
+     *
+     * URIs arriving from an ACTION_VIEW intent are usually not persistable in any form,
+     * hence [PersistedAccess.None]: still readable for as long as this task lives, but
+     * not worth promising the user anything about.
      */
-    override fun persistAccess(uri: Uri) {
-        runCatching {
-            resolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
-        }
+    override fun persistAccess(uri: Uri): PersistedAccess {
+        val readWrite = runCatching {
+            resolver.takePersistableUriPermission(uri, READ or WRITE)
+        }.isSuccess
+        if (readWrite) return PersistedAccess.ReadWrite
+
+        val read = runCatching { resolver.takePersistableUriPermission(uri, READ) }.isSuccess
+        return if (read) PersistedAccess.ReadOnly else PersistedAccess.None
     }
+
+    /**
+     * Releasing with flags that were never taken throws, so the caller has to hand back
+     * exactly what [persistAccess] reported.
+     */
+    override fun releaseAccess(uri: Uri, access: PersistedAccess) {
+        val flags = when (access) {
+            PersistedAccess.ReadWrite -> READ or WRITE
+            PersistedAccess.ReadOnly -> READ
+            PersistedAccess.None -> return
+        }
+        runCatching { resolver.releasePersistableUriPermission(uri, flags) }
+    }
+
+    override fun persistedUris(): Set<String> =
+        runCatching { resolver.persistedUriPermissions.map { it.uri.toString() }.toSet() }
+            .getOrDefault(emptySet())
 
     /** The provider's reported size, or null when it does not report one. */
     private fun sizeOf(uri: Uri): Long? = runCatching {
@@ -82,5 +107,8 @@ class DocumentRepository(private val resolver: ContentResolver) : DocumentSource
     private companion object {
         /** Comfortably larger than any hand-written document, small enough to stay responsive. */
         const val MAX_SIZE_BYTES = 2L * 1024 * 1024
+
+        const val READ = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        const val WRITE = Intent.FLAG_GRANT_WRITE_URI_PERMISSION
     }
 }
