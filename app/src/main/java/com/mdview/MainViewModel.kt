@@ -100,15 +100,20 @@ class MainViewModel(
     private var lastRequestedUri: Uri? = null
 
     /**
-     * Whether a document has actually been opened in this session.
+     * The draft key of the document currently in the buffer, or null when there is none.
      *
-     * Guards the autosave. `snapshotFlow` emits its current value the moment it is
-     * collected, so without this the debounce fires half a second after launch with an
-     * empty buffer, sees it match the equally-empty `savedText`, and deletes the
-     * untitled draft -- destroying unsaved work belonging to the *previous* session
-     * while the user is still looking at the dashboard.
+     * Both halves of this matter to the autosave. `snapshotFlow` emits its current value
+     * the moment it is collected, so while this is null the debounce would otherwise
+     * fire half a second after launch with an empty buffer, decide it matches the
+     * equally-empty `savedText`, and delete the untitled draft -- destroying the
+     * previous session's work while the user is still looking at the dashboard.
+     *
+     * And it is set only once the text is actually in the buffer, rather than derived
+     * from `uiState.uri`, which is not populated until the read finishes. Deriving it
+     * left a window where the autosave wrote the *old* document's text under the *new*
+     * document's key.
      */
-    private var hasAdoptedDocument = false
+    private var adoptedKey: String? = null
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -120,7 +125,7 @@ class MainViewModel(
     val libraryState: StateFlow<LibraryState> = library.state
 
     private val draftKey: String
-        get() = DraftStore.keyFor(_uiState.value.uri?.toString())
+        get() = adoptedKey ?: DraftStore.UNTITLED_KEY
 
     private val textChanges = snapshotFlow { textState.text.toString() }
 
@@ -160,7 +165,6 @@ class MainViewModel(
 
     fun open(uri: Uri) {
         lastRequestedUri = uri
-        hasAdoptedDocument = true
         // Written before the read rather than after: a process death partway through
         // would otherwise restore onto the document screen with nothing to show.
         savedState[KEY_URI] = uri.toString()
@@ -180,6 +184,7 @@ class MainViewModel(
                     val recovered = draft != null && draft != document.text
                     val text = if (recovered) draft else document.text
                     setText(text)
+                    adoptedKey = DraftStore.keyFor(uri.toString())
 
                     val name = documents.displayName(uri)
                     _uiState.update {
@@ -243,11 +248,11 @@ class MainViewModel(
             drafts.clear(draftKey)
             drafts.clear(DraftStore.UNTITLED_KEY)
             lastRequestedUri = null
-            hasAdoptedDocument = true
             format = LoadedDocument("")
             savedText = ""
             savedState.remove<String>(KEY_URI)
             setText("")
+            adoptedKey = DraftStore.UNTITLED_KEY
             _uiState.update {
                 it.copy(
                     destination = Destination.Document,
@@ -267,7 +272,6 @@ class MainViewModel(
     /** Picks up the scratch document the dashboard offers when one is waiting. */
     fun openUntitledDraft() {
         viewModelScope.launch {
-            hasAdoptedDocument = true
             lastRequestedUri = null
             format = LoadedDocument("")
             savedText = ""
@@ -330,7 +334,6 @@ class MainViewModel(
     /** Writes to a newly created document and adopts it as the open one. */
     fun saveAs(uri: Uri) {
         val access = documents.persistAccess(uri)
-        hasAdoptedDocument = true
         savedState[KEY_URI] = uri.toString()
         _uiState.update { it.copy(canWrite = access != PersistedAccess.ReadOnly) }
         writeTo(uri, adopt = true)
@@ -346,7 +349,10 @@ class MainViewModel(
                     savedText = content
                     // The text is on disk now, so the draft has nothing left to protect.
                     drafts.clear(previousKey)
-                    if (adopt) drafts.clear(DraftStore.keyFor(uri.toString()))
+                    if (adopt) {
+                        drafts.clear(DraftStore.keyFor(uri.toString()))
+                        adoptedKey = DraftStore.keyFor(uri.toString())
+                    }
                     val name = if (adopt) documents.displayName(uri) else _uiState.value.fileName
                     _uiState.update {
                         it.copy(
@@ -425,7 +431,7 @@ class MainViewModel(
 
     private suspend fun persistDraft(current: String) {
         // Sitting on the dashboard must not touch the drafts of a previous session.
-        if (!hasAdoptedDocument) return
+        if (adoptedKey == null) return
         if (current == savedText) drafts.clear(draftKey) else drafts.save(draftKey, current)
     }
 
@@ -444,8 +450,8 @@ class MainViewModel(
             navigate(Destination.Dashboard)
             return
         }
-        hasAdoptedDocument = true
         setText(draft)
+        adoptedKey = DraftStore.UNTITLED_KEY
         _uiState.update {
             it.copy(
                 destination = Destination.Document,
