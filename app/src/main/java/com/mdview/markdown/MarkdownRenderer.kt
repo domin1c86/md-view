@@ -269,6 +269,15 @@ private fun MarkdownImages(images: List<Image>, modifier: Modifier = Modifier) {
 @Composable
 private fun MarkdownImage(image: Image) {
     val alt = collectText(image).ifBlank { image.destination.orEmpty() }
+
+    // Fetching a remote image tells its host that this document was opened, and when --
+    // ordinary tracking-pixel behaviour. When the user has asked us not to, say so
+    // rather than quietly rendering nothing.
+    if (isRemoteImage(image.destination) && LocalRemoteImages.current == RemoteImageAccess.Blocked) {
+        ImageNotice(stringResource(R.string.image_blocked, alt))
+        return
+    }
+
     SubcomposeAsyncImage(
         // Only absolute references resolve. A document opened through the picker grants
         // access to itself, not its folder, so a relative path has no base to hang off.

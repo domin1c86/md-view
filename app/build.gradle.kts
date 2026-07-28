@@ -41,6 +41,8 @@ android {
 
     buildFeatures {
         compose = true
+        // For VERSION_NAME, shown in the settings panel.
+        buildConfig = true
     }
 
     testOptions {

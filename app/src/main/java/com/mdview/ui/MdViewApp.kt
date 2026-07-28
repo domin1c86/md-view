@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mdview.MainViewModel
 import com.mdview.Mode
 import com.mdview.R
+import com.mdview.ui.theme.ReadingTypography
 
 /**
  * What the user asked for while the document still had unsaved changes.
@@ -66,6 +67,7 @@ private enum class PendingAction { Open, New }
 fun MdViewApp(
     viewModel: MainViewModel,
     onOpenPicker: () -> Unit,
+    readingScale: Float,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -219,22 +221,26 @@ fun MdViewApp(
             if (state.isBusy) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
-            when {
-                state.mode == Mode.Edit ->
-                    EditorScreen(viewModel.textState, editorScrollState, Modifier.weight(1f))
+            // Scoped to the document itself: the reading-size preference is about the
+            // text being read, not the top bar, dialogs and navigation labels.
+            ReadingTypography(readingScale) {
+                when {
+                    state.mode == Mode.Edit ->
+                        EditorScreen(viewModel.textState, editorScrollState, Modifier.weight(1f))
 
-                state.uri == null && viewModel.textState.text.isEmpty() ->
-                    EmptyState(
-                        onOpen = ::requestOpen,
-                        onNew = ::requestNew,
+                    state.uri == null && viewModel.textState.text.isEmpty() ->
+                        EmptyState(
+                            onOpen = ::requestOpen,
+                            onNew = ::requestNew,
+                            modifier = Modifier.weight(1f),
+                        )
+
+                    else -> PreviewScreen(
+                        source = viewModel.textState.text.toString(),
+                        scrollState = previewScrollState,
                         modifier = Modifier.weight(1f),
                     )
-
-                else -> PreviewScreen(
-                    source = viewModel.textState.text.toString(),
-                    scrollState = previewScrollState,
-                    modifier = Modifier.weight(1f),
-                )
+                }
             }
         }
     }

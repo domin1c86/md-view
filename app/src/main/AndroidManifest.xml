@@ -5,6 +5,10 @@
          through the Storage Access Framework and needs no permission. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- So "load images on unmetered networks only" can tell what it is connected to.
+         A normal permission: granted at install, never prompted for. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".MdViewApplication"
         android:allowBackup="true"
