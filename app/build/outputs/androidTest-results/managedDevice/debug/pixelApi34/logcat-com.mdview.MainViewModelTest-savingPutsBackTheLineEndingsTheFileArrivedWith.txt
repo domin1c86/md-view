@@ -1,2 +1,0 @@
-07-28 11:56:42.014  1718  1741 I TestRunner: started: savingPutsBackTheLineEndingsTheFileArrivedWith(com.mdview.MainViewModelTest)
-07-28 11:56:42.033  1718  1741 I TestRunner: finished: savingPutsBackTheLineEndingsTheFileArrivedWith(com.mdview.MainViewModelTest)

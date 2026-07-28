@@ -1,9 +1,0 @@
-com.mdview.app-pngs-0 D:\Coding\md-view\app\build\generated\res\pngs\release
-com.mdview.app-updated_navigation_xml-1 D:\Coding\md-view\app\build\generated\updated_navigation_xml\release
-com.mdview.app-packageReleaseResources-2 D:\Coding\md-view\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
-com.mdview.app-packageReleaseResources-3 D:\Coding\md-view\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
-com.mdview.app-merged-not-compiled-resources-4 D:\Coding\md-view\app\build\intermediates\merged-not-compiled-resources\release
-com.mdview.app-release-5 D:\Coding\md-view\app\build\intermediates\merged_res\release\mergeReleaseResources
-com.mdview.app-main-6 D:\Coding\md-view\app\src\main\res
-com.mdview.app-release-7 D:\Coding\md-view\app\src\release\res
-gradleHome-0 C:\Users\Domin1c\.gradle

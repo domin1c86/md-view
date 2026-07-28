@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<incidents format="6" by="lint 9.3.1" type="partial_results">
-    <map id="UnusedResources">
-        <entry
-            name="model"
-            string="string[draft_restored(R),error_open_missing(R),error_save_missing(R),show_source(R),show_preview(R),empty_title(R),open_a_markdown_file(R),save(R),untitled(R),undo(R),redo(R),more_actions(R),new_document(R),discard(R),start_a_new_document(R)];;;;"/>
-    </map>
-
-</incidents>
