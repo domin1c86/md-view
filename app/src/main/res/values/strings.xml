@@ -40,6 +40,7 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reading">Reading</string>
     <string name="settings_privacy">Privacy</string>
+    <string name="settings_folders">Image folders</string>
     <string name="settings_about">About</string>
 
     <string name="setting_theme">Theme</string>
@@ -66,6 +67,10 @@
     <string name="remote_images_never">Never</string>
     <string name="remote_images_unmetered">On unmetered networks</string>
     <string name="remote_images_always">Always</string>
+
+    <string name="setting_folders_body">Folders MdView may read images from. A folder covers every document inside it.</string>
+    <string name="folders_empty">None yet. When a document needs one, its images will offer to ask.</string>
+    <string name="folder_forget">Stop using this folder</string>
 
     <string name="about_version">Version %1$s</string>
     <string name="about_body">A Markdown reader and editor. Files stay on your device; nothing is uploaded.</string>
@@ -125,4 +130,6 @@
     <string name="image_loading">Loading image…</string>
     <string name="image_failed">Image unavailable: %1$s</string>
     <string name="image_blocked">Image not loaded: %1$s</string>
+    <string name="image_needs_folder">Images need folder access.\nTap to choose the folder this document is in.</string>
+    <string name="image_wrong_folder">That folder does not contain this document.\nTap to choose another.</string>
 </resources>

@@ -19,12 +19,16 @@ import com.mdview.Destination
 import com.mdview.MainViewModel
 import com.mdview.MdViewApplication
 import com.mdview.R
+import com.mdview.data.FolderAccess
+import com.mdview.data.FolderGrant
 import com.mdview.data.InvalidSkinException
 import com.mdview.data.LanguageChoice
 import com.mdview.data.LibraryState
 import com.mdview.data.RemoteImagePolicy
 import com.mdview.data.Settings
 import com.mdview.data.SkinImporter
+import com.mdview.markdown.GrantedFolderImages
+import com.mdview.markdown.LocalDocumentImages
 import com.mdview.markdown.LocalRemoteImages
 import com.mdview.markdown.RemoteImageAccess
 import com.mdview.markdown.unmeteredNetwork
@@ -100,7 +104,52 @@ fun MdViewRoot(
 
     fun launchOpen() = openLauncher.launch(arrayOf("text/*", "application/octet-stream"))
 
-    CompositionLocalProvider(LocalRemoteImages provides rememberImageAccess(settings)) {
+    val folderStore = remember(context) { MdViewApplication.from(context).folders }
+    val folderAccess = remember(context) { FolderAccess(context.contentResolver) }
+    val grants by folderStore.grants.collectAsStateWithLifecycle()
+
+    val folderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { tree ->
+        if (tree == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            if (!folderAccess.persist(tree)) return@launch
+            val evicted = folderStore.add(
+                FolderGrant(
+                    treeUri = tree.toString(),
+                    displayName = folderAccess.displayName(tree),
+                    grantedAt = System.currentTimeMillis(),
+                )
+            )
+            // A grant the store can no longer list is one the user can never revoke.
+            evicted.forEach { grant -> grant.treeUri.toUri().let(folderAccess::release) }
+        }
+    }
+
+    fun forgetFolder(grant: FolderGrant) {
+        scope.launch {
+            // Release before forgetting: the store is the only record of what was taken,
+            // so dropping the row first would strand the permission.
+            folderAccess.release(grant.treeUri.toUri())
+            folderStore.remove(grant.treeUri)
+        }
+    }
+
+    // Keyed on the document *and* the grants, which is what makes a freshly granted
+    // folder re-resolve every figure already on screen: a new grant list is a new key, a
+    // new instance, and a new value for a static CompositionLocal.
+    val documentImages = remember(state.uri, grants) {
+        GrantedFolderImages(state.uri, grants) {
+            // OpenDocumentTree forwards its input as DocumentsContract.EXTRA_INITIAL_URI
+            // on API 26+, which is minSdk. A hint only -- DocumentsUI may ignore it.
+            folderLauncher.launch(state.uri)
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalRemoteImages provides rememberImageAccess(settings),
+        LocalDocumentImages provides documentImages,
+    ) {
         when (state.destination) {
             Destination.Dashboard -> {
                 val entries = (library as? LibraryState.Content)?.entries.orEmpty()
@@ -142,6 +191,8 @@ fun MdViewRoot(
                             },
                             onDeleteSkin = ::deleteSkin,
                             importError = importError,
+                            folders = grants,
+                            onForgetFolder = ::forgetFolder,
                             modifier = contentModifier,
                         )
                     },

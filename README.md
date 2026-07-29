@@ -89,13 +89,22 @@ draws it, the typography and shape rules, a worked example, and the validation l
 Images are fetched with [Coil](https://coil-kt.github.io/coil/), which is why the app
 declares `INTERNET`. Whether a *remote* image loads depends on the setting above;
 `data:`, `content:` and `file:` images always render, since they never leave the device.
-Two limits are worth knowing:
+
+**Images stored beside the document** — `./img/diagram.png`, `../assets/logo.png` — need one
+extra step, because opening a document through the picker grants access to that one file and
+not to the folder around it. The first such image offers to fix that: tap it, choose the
+folder the document lives in, and every image under that folder resolves from then on. A
+path starting with `/` is measured from the granted folder's root, the convention Hugo,
+Jekyll and MkDocs use.
+
+The grant is remembered, covers every document beneath it, and is listed under
+**Mine → Image folders** with a way to hand it back. Two limits are worth knowing:
 
 - Only an image on a line of its own becomes a real image. One sitting inside a sentence
   stays an `[image: alt]` placeholder.
-- Only absolute references resolve — `https://`, `content://`, `file://`, `data:`.
-  A relative path like `./img/diagram.png` cannot be found, because opening a document
-  through the picker grants access to that one file and not to the folder around it.
+- Cloud providers are not supported for relative paths. Google Drive and the like give
+  documents opaque ids with no folder structure to measure a path against, so those images
+  say so rather than guessing.
 
 ## Building
 

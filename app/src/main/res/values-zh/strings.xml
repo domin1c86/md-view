@@ -41,6 +41,7 @@
     <string name="settings_appearance">外观</string>
     <string name="settings_reading">阅读</string>
     <string name="settings_privacy">隐私</string>
+    <string name="settings_folders">图片文件夹</string>
     <string name="settings_about">关于</string>
 
     <string name="setting_theme">主题</string>
@@ -67,6 +68,10 @@
     <string name="remote_images_never">从不</string>
     <string name="remote_images_unmetered">仅在不计流量的网络下</string>
     <string name="remote_images_always">始终</string>
+
+    <string name="setting_folders_body">MdView 可以从这些文件夹读取图片。一个文件夹对其中的所有文档都有效。</string>
+    <string name="folders_empty">还没有。当某个文档需要时，它的图片会主动请求。</string>
+    <string name="folder_forget">不再使用此文件夹</string>
 
     <string name="about_version">版本 %1$s</string>
     <string name="about_body">一个 Markdown 阅读与编辑工具。文件只留在你的设备上，不会上传。</string>
@@ -123,4 +128,6 @@
     <string name="image_loading">正在加载图片…</string>
     <string name="image_failed">图片无法加载：%1$s</string>
     <string name="image_blocked">未加载图片：%1$s</string>
+    <string name="image_needs_folder">显示图片需要文件夹访问权限。\n点按以选择本文档所在的文件夹。</string>
+    <string name="image_wrong_folder">该文件夹不包含本文档。\n点按以另选一个。</string>
 </resources>

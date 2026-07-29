@@ -60,6 +60,12 @@ class LocalizationTest {
             R.string.setting_remote_images,
             R.string.settings_appearance,
             R.string.settings_privacy,
+            R.string.settings_folders,
+            R.string.setting_folders_body,
+            R.string.folders_empty,
+            R.string.folder_forget,
+            R.string.image_needs_folder,
+            R.string.image_wrong_folder,
         ).forEach { id ->
             assertNotEquals(
                 "untranslated: ${base.resources.getResourceEntryName(id)}",

@@ -7,8 +7,9 @@ import java.io.File
 /**
  * Returns app-private storage to what a fresh install looks like.
  *
- * Drafts, the library, the settings and the imported skins all outlive a process by
- * design, which also means they outlive a test. This has to run **before the Activity
+ * Drafts, the library, the settings, the imported skins and the granted image folders all
+ * outlive a process by design, which also means they outlive a test. This has to run
+ * **before the Activity
  * starts** -- by the time an `@Before` method runs, the ViewModel has already restored a
  * draft -- so every suite chains it outside the Compose rule rather than calling it from
  * a setup method.
@@ -36,6 +37,7 @@ internal object TestStorage {
         File(context.filesDir, "drafts").deleteRecursively()
         File(context.filesDir, "library").deleteRecursively()
         File(context.filesDir, "skins").deleteRecursively()
+        File(context.filesDir, "folders").deleteRecursively()
         File(context.filesDir, "settings.txt").delete()
 
         seed(context)

@@ -2,6 +2,7 @@ package com.mdview.markdown
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,7 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
@@ -287,25 +291,54 @@ private fun MarkdownImage(image: Image) {
     // Fetching a remote image tells its host that this document was opened, and when --
     // ordinary tracking-pixel behaviour. When the user has asked us not to, say so
     // rather than quietly rendering nothing.
+    //
+    // First, and unconditionally: nothing below may reach around the privacy gate. A
+    // local path is not caught here and must not be -- it never leaves the device, which
+    // is the same reasoning that exempts `data:`, `content:` and `file:`.
     if (isRemoteImage(image.destination) && LocalRemoteImages.current == RemoteImageAccess.Blocked) {
         ImageNotice(stringResource(R.string.image_blocked, alt))
         return
     }
 
-    SubcomposeAsyncImage(
-        // Only absolute references resolve. A document opened through the picker grants
-        // access to itself, not its folder, so a relative path has no base to hang off.
-        model = image.destination,
-        contentDescription = alt.ifBlank { null },
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 320.dp)
-            .clip(RoundedCornerShape(LocalSkin.current.shape.medium.dp)),
-        contentScale = ContentScale.Fit,
-        alignment = Alignment.Center,
-        loading = { ImageNotice(stringResource(R.string.image_loading)) },
-        error = { ImageNotice(stringResource(R.string.image_failed, alt)) },
-    )
+    val images = LocalDocumentImages.current
+    val model = remember(images, image.destination) { images.modelFor(image.destination) }
+
+    when (model) {
+        is ImageModel.Fetch -> SubcomposeAsyncImage(
+            model = model.model,
+            contentDescription = alt.ifBlank { null },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 320.dp)
+                .clip(RoundedCornerShape(LocalSkin.current.shape.medium.dp)),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.Center,
+            loading = { ImageNotice(stringResource(R.string.image_loading)) },
+            error = { ImageNotice(stringResource(R.string.image_failed, alt)) },
+        )
+
+        // A relative path with nothing to hang off. Picking the file granted access to
+        // that file alone, so the folder has to be asked for separately -- and this is
+        // where it is worth asking, since it is the only place the payoff is visible.
+        ImageModel.NeedsFolder -> if (images.canRequestFolder) {
+            ImageNotice(
+                text = stringResource(R.string.image_needs_folder),
+                onClick = images::requestFolder,
+            )
+        } else {
+            ImageNotice(stringResource(R.string.image_failed, alt))
+        }
+
+        // Distinct from NeedsFolder on purpose: re-offering the same invitation to
+        // someone who has already granted a folder tells them nothing about why it did
+        // not work.
+        ImageModel.WrongFolder -> ImageNotice(
+            text = stringResource(R.string.image_wrong_folder),
+            onClick = if (images.canRequestFolder) images::requestFolder else null,
+        )
+
+        ImageModel.Unusable -> ImageNotice(stringResource(R.string.image_failed, alt))
+    }
 }
 
 /**
@@ -313,21 +346,51 @@ private fun MarkdownImage(image: Image) {
  *
  * Clipped to the same radius as the image it replaces -- it used not to be, so a blocked
  * image swapped a rounded picture for a hard-edged grey slab.
+ *
+ * With an [onClick] it becomes an invitation rather than an apology. That variant is
+ * wrapped in `DisableSelection`, because `PreviewScreen` puts the whole document inside a
+ * `SelectionContainer` and a tap inside a text-selection region is otherwise ambiguous.
  */
 @Composable
-private fun ImageNotice(text: String) {
+private fun ImageNotice(text: String, onClick: (() -> Unit)? = null) {
     val skin = LocalSkin.current
-    Text(
+
+    // Clipped before the click, so the ripple follows the rounded edge rather than the
+    // square bounds behind it.
+    val shell = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(skin.shape.medium.dp))
+        .background(skin.colors.surfaceSunken)
+
+    @Composable
+    fun Notice(modifier: Modifier) = Text(
         text = text,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(skin.shape.medium.dp))
-            .background(skin.colors.surfaceSunken)
-            .padding(vertical = 24.dp, horizontal = 12.dp),
+        modifier = modifier.padding(vertical = 24.dp, horizontal = 12.dp),
         style = MaterialTheme.typography.bodyMedium,
-        color = skin.colors.textMuted,
+        color = if (onClick == null) skin.colors.textMuted else skin.colors.accent,
         textAlign = TextAlign.Center,
     )
+
+    if (onClick == null) {
+        Notice(shell)
+        return
+    }
+
+    DisableSelection {
+        Notice(
+            shell
+                .testTag(MarkdownTags.IMAGE_ACTION)
+                .clickable(role = Role.Button, onClick = onClick)
+        )
+    }
+}
+
+/**
+ * Test handles for the parts of a rendered document that carry a whole sentence rather
+ * than a label. Matching on the text would mean matching a translated sentence.
+ */
+object MarkdownTags {
+    const val IMAGE_ACTION = "markdown:imageAction"
 }
 
 @Composable

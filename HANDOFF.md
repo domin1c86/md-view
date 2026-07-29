@@ -109,8 +109,16 @@ fun main() = Unit
 
 ![remote image](https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Example.jpg/320px-Example.jpg)
 
+![beside the document](./images/pic.png)
+
+![from the folder root](/images/pic.png)
+
+![outside the tree](../../../pic.png)
+
 [A link](https://example.com)
 ````
+
+Put a real PNG at `images/pic.png` next to `fixture.md` — items 41–43 need it to exist.
 
 Install and launch:
 
@@ -171,6 +179,15 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 37 | Go back to a phone width (`adb shell wm size reset`) | The bottom bar returns; still exactly one set of tabs on screen |
 | 38 | **Mine** → Text size → Large, then open a document with a code block and switch to source | Code blocks **and the editor** grow. They used to ignore this setting entirely |
 | 39 | Switch to 简体中文 and revisit Mine | The skin section, the import row and any error message are all translated |
+| 40 | Open `fixture.md` and scroll to `./images/pic.png` | A notice offering folder access, **not** a plain "unavailable". A document with no local images must show no such notice anywhere |
+| 41 | Tap it | The system folder picker opens — ideally already at `fixture.md`'s own folder. `EXTRA_INITIAL_URI` is a hint DocumentsUI may ignore, so check rather than assume. Choose that folder |
+| 42 | Look at the two resolvable images | Both `./images/pic.png` **and** `/images/pic.png` now render, with no reopen and no second prompt |
+| 43 | Look at `../../../pic.png` | "Image unavailable". It must never show a picture from outside the granted folder |
+| 44 | Open a second document in a *sibling* folder under the same tree | Its images load with **no** second grant |
+| 45 | Force-stop the app, then reboot the device, then reopen `fixture.md` | Images still load. The grant is persisted, not per-session |
+| 46 | **Mine** → **Image folders** | The folder is listed by name. Tap ✕; images stop loading and the offer comes back |
+| 47 | Grant a folder that does *not* contain the document | The distinct "does not contain this document" notice — not the same invitation again |
+| 48 | Open a document from Google Drive that uses a relative image, and grant a Drive folder | The "wrong folder" notice. Never a spinner that never resolves, and never a crash |
 
 Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
 survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
@@ -217,10 +234,14 @@ Both follow from the "full image support" decision, and neither is a defect:
   untrusted `.md` can contact whatever servers its images point at — ordinary
   tracking-pixel behaviour. **Mine → Load images from the web** gates this now; the
   default is still Always, so change it if that matters to you.
-- **Relative image paths do not resolve.** `![](./img/a.png)` cannot load, because picking
-  a file through the picker grants access to that one file and not the folder around it.
-  Only `https://`, `content://`, `file://` and `data:` work. Fixing this means moving to
-  `OpenDocumentTree` and reworking the whole open flow.
+- **A folder grant is transitive, and permanent until revoked.** Relative image paths do
+  resolve now, but only after the user grants the document's folder through the notice on
+  the first unresolved image. That grant then covers *every* document and *every* image
+  beneath that folder, for good — not just the document that prompted it. That is the
+  point, since one grant serves a whole notes tree, but it is more access than the single
+  file the picker hands over. **Mine → Image folders** lists what is held and takes it
+  back. At most ten are kept, because Android caps how many URI grants an app may persist
+  and the recents list already spends part of that budget.
 
 ---
 
@@ -229,12 +250,13 @@ Both follow from the "full image support" decision, and neither is a defect:
 Cut from scope deliberately, listed so nothing here reads as an oversight:
 
 TalkBack heading semantics · tooltips on the icon-only top-bar actions · monochrome
-launcher icon · task-list (`- [ ]`) rendering · link-scheme restriction · sibling-file
-image resolution · search within the document list · sorting the list by anything other
-than recency · CI.
+launcher icon · task-list (`- [ ]`) rendering · link-scheme restriction · relative images
+on cloud providers · inline (mid-sentence) image rendering · search within the document
+list · sorting the list by anything other than recency · CI.
 
 Delivered since this list was first written: backup and data-extraction rules, the
-remote-image privacy gate, and localisation (English + 简体中文).
+remote-image privacy gate, localisation (English + 简体中文), the skin system, and
+sibling-file image resolution.
 
 `CLAUDE.md` records the standing scope boundary: preview and source editing plus the
 dashboard and settings, with no cloud sync, export, formatting toolbar, syntax

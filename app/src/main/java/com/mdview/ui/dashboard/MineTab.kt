@@ -16,10 +16,13 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -35,6 +38,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.mdview.BuildConfig
 import com.mdview.R
+import com.mdview.data.FolderGrant
+import com.mdview.data.FolderGrantStore
 import com.mdview.data.LanguageChoice
 import com.mdview.data.ReadingSize
 import com.mdview.data.RemoteImagePolicy
@@ -54,6 +59,11 @@ object SettingsTags {
     fun deleteSkin(id: String) = "settings:deleteSkin:$id"
     const val IMPORT_SKIN = "settings:importSkin"
     const val IMPORT_ERROR = "settings:importError"
+
+    const val FOLDERS = "settings:folders"
+    const val FOLDERS_EMPTY = "settings:foldersEmpty"
+    fun folder(treeUri: String) = "settings:folder:$treeUri"
+    fun forgetFolder(treeUri: String) = "settings:forgetFolder:$treeUri"
 }
 
 /**
@@ -76,6 +86,8 @@ fun MineTab(
     onImportSkin: () -> Unit,
     onDeleteSkin: (Skin) -> Unit,
     importError: Int?,
+    folders: List<FolderGrant>,
+    onForgetFolder: (FolderGrant) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Material You is only offered from Android 12; below it the switch would be a
@@ -174,6 +186,10 @@ fun MineTab(
             )
         }
 
+        SettingsGroup(R.string.settings_folders) {
+            FolderGrantList(folders = folders, onForget = onForgetFolder)
+        }
+
         SettingsGroup(R.string.settings_about) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(
@@ -261,6 +277,74 @@ private fun ImportSkinRow(onImportSkin: () -> Unit, importError: Int?) {
                 style = MaterialTheme.typography.bodySmall,
                 color = skin.colors.danger,
             )
+        }
+    }
+}
+
+/**
+ * The folders MdView may read images from, each with a way to hand it back.
+ *
+ * Plain rows in the panel's own scroller rather than a `LazyColumn`: the Mine tab must
+ * stay a single scroll container for `performScrollTo()`, and [FolderGrantStore.MAX_GRANTS]
+ * is what makes drawing them all cheap enough for that to be free.
+ */
+@Composable
+private fun FolderGrantList(folders: List<FolderGrant>, onForget: (FolderGrant) -> Unit) {
+    val skin = LocalSkin.current
+
+    Column(Modifier.testTag(SettingsTags.FOLDERS)) {
+        Text(
+            text = stringResource(R.string.setting_folders_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = skin.colors.textMuted,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        )
+
+        if (folders.isEmpty()) {
+            // A caption rather than nothing, so the group is never a bare heading.
+            Text(
+                text = stringResource(R.string.folders_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = skin.colors.textSecondary,
+                modifier = Modifier
+                    .testTag(SettingsTags.FOLDERS_EMPTY)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+            return@Column
+        }
+
+        folders.forEach { grant ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(SettingsTags.folder(grant.treeUri))
+                    .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FolderOpen,
+                    contentDescription = null,
+                    tint = skin.colors.textSecondary,
+                    modifier = Modifier.padding(end = 14.dp).size(22.dp),
+                )
+                Text(
+                    text = grant.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = skin.colors.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = { onForget(grant) },
+                    modifier = Modifier.testTag(SettingsTags.forgetFolder(grant.treeUri)),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.folder_forget),
+                        tint = skin.colors.textMuted,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
         }
     }
 }

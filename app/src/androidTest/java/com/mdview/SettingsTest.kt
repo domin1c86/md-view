@@ -53,6 +53,17 @@ class SettingsTest {
     }
 
     @Test
+    fun everyGroupStaysReachableInsideTheOneScroller() {
+        // The panel must remain a single vertical scroll container. Each group added since
+        // has been one more chance to reach for a LazyColumn and silently break this.
+        openSettings()
+
+        rule.onNodeWithTag(SettingsTags.option(ThemeChoice.System)).performScrollTo()
+        rule.onNodeWithTag(SettingsTags.option(RemoteImagePolicy.Never)).performScrollTo()
+        rule.onNodeWithTag(SettingsTags.FOLDERS).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun theDefaultsAreSelectedOnAFreshInstall() {
         openSettings()
 

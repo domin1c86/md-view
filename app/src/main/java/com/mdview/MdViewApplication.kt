@@ -2,6 +2,8 @@ package com.mdview
 
 import android.app.Application
 import android.content.Context
+import com.mdview.data.FolderAccess
+import com.mdview.data.FolderGrantStore
 import com.mdview.data.LibraryStore
 import com.mdview.data.SettingsStore
 import com.mdview.data.SkinStore
@@ -12,7 +14,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * Owns the three stores that outlive any one screen.
+ * Owns the four stores that outlive any one screen.
  *
  * They have to be process-wide singletons rather than per-ViewModel instances: the
  * theme is read in [MainActivity.attachBaseContext] while the Mine tab writes it from a
@@ -36,6 +38,9 @@ class MdViewApplication : Application() {
     lateinit var library: LibraryStore
         private set
 
+    lateinit var folders: FolderGrantStore
+        private set
+
     override fun onCreate() {
         super.onCreate()
         buildStores()
@@ -43,7 +48,8 @@ class MdViewApplication : Application() {
 
     /**
      * Order matters: [SkinStore] needs the two active skin ids to know which files it
-     * has to read synchronously, and those live in [SettingsStore].
+     * has to read synchronously, and those live in [SettingsStore]. [FolderGrantStore]
+     * depends on nothing and so is built last.
      */
     private fun buildStores() {
         settings = SettingsStore(filesDir, scope = scope)
@@ -54,7 +60,15 @@ class MdViewApplication : Application() {
             scope = scope,
         )
         library = LibraryStore(File(filesDir, "library"))
+        folders = FolderGrantStore(File(filesDir, "folders"))
         scope.launch { library.load() }
+        scope.launch {
+            folders.load()
+            // Grants die outside the app -- the provider's data is cleared, a card is
+            // ejected, the folder is deleted. Only reconcile against a reading that
+            // actually succeeded: an empty set from a failed call would drop every row.
+            FolderAccess(contentResolver).persistedTrees()?.let { folders.reconcile(it) }
+        }
     }
 
     /**
@@ -62,7 +76,7 @@ class MdViewApplication : Application() {
      *
      * Instrumentation runs every test in one process, so deleting the files between
      * tests is not enough — the in-memory flows would keep serving the previous test's
-     * library, skins and theme. Called from the rule that wipes app storage.
+     * library, skins, folder grants and theme. Called from the rule that wipes app storage.
      */
     internal fun resetForTests() = buildStores()
 
