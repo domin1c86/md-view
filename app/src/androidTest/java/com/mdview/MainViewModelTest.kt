@@ -76,10 +76,37 @@ class MainViewModelTest {
         }
     )
 
-    /** Mutating a [androidx.compose.foundation.text.input.TextFieldState] only reaches
-     *  `snapshotFlow` once the global snapshot has been applied. */
+    /**
+     * Types into the buffer and makes sure `snapshotFlow` has heard about it.
+     *
+     * **The nested snapshot is the whole point, not tidiness.**
+     * `TextFieldState.setTextAndPlaceCursorAtEnd` writes into the *current* snapshot, which
+     * outside an explicit one is the global snapshot -- so the edit sits there as a pending
+     * change until somebody calls `sendApplyNotifications`. In this process somebody else
+     * does: any Compose UI suite that ran earlier has started
+     * `androidx.compose.ui.platform.GlobalSnapshotManager`, which watches for global writes
+     * and calls `sendApplyNotifications` itself from the real main thread, for the lifetime
+     * of the process.
+     *
+     * Two threads then race for one pending change. When the main thread wins, this
+     * test's own call finds nothing pending and returns immediately, the notification is
+     * delivered over there instead, and it can land *after* `advanceUntilIdle` has already
+     * drained the scheduler -- so the collector in `MainViewModel` runs too late and the
+     * dirty and draft assertions read stale state. That is the whole story behind "fails
+     * one random draft case per full run, passes 25/25 alone".
+     *
+     * `withMutableSnapshot` ends it: `MutableSnapshot.apply()` invokes the apply observers
+     * **synchronously on this thread**, so the flow has been signalled before this function
+     * returns and there is no pending global change left for anyone to steal.
+     *
+     * The trailing call stays as belt and braces -- if any part of the edit path ever
+     * writes outside the nested snapshot, that write is still notified exactly as before.
+     * It cannot bring the race back, because the synchronous apply has already happened.
+     */
     private fun MainViewModel.type(text: String) {
-        textState.setTextAndPlaceCursorAtEnd(text)
+        Snapshot.withMutableSnapshot {
+            textState.setTextAndPlaceCursorAtEnd(text)
+        }
         Snapshot.sendApplyNotifications()
     }
 
