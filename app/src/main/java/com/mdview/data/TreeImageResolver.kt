@@ -48,6 +48,32 @@ internal object TreeImageResolver {
         return runCatching { DocumentsContract.buildDocumentUriUsingTree(treeUri, childId) }.getOrNull()
     }
 
+    /**
+     * The image's URI built from a tree that covers **the image**, not the document.
+     *
+     * This is the one that makes granting the folder the pictures are actually in work.
+     * [childUri] can only answer when the grant contains the document, which meant a
+     * document beside an `image/` folder needed the *parent* granted — a strictly wider
+     * permission than the figure needs, and not what anyone reaches for when the notice
+     * appears on the image itself.
+     *
+     * Only for [ImageTarget.Base.DocumentFolder]. A leading slash is defined as the
+     * granted tree's root, so it has no meaning until a tree covering the document says
+     * where that root is; [childUri] still owns that case.
+     */
+    fun siblingUri(treeUri: Uri, docUri: Uri, path: LocalPath): Uri? {
+        if (treeUri.authority != docUri.authority) return null
+        val treeId = treeDocumentId(treeUri) ?: return null
+        val docId = documentId(docUri) ?: return null
+        val imageId = TreeDocumentIds.siblingId(docId, path) ?: return null
+
+        // The grant has to reach the image itself. Everything the separator-aware prefix
+        // guards against applies here unchanged.
+        if (!TreeDocumentIds.covers(treeId, imageId)) return null
+
+        return runCatching { DocumentsContract.buildDocumentUriUsingTree(treeUri, imageId) }.getOrNull()
+    }
+
     private fun treeDocumentId(treeUri: Uri): String? = runCatching {
         if (!DocumentsContract.isTreeUri(treeUri)) return null
         DocumentsContract.getTreeDocumentId(treeUri)

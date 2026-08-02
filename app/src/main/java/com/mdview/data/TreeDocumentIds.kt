@@ -58,6 +58,37 @@ internal object TreeDocumentIds {
     }
 
     /**
+     * The document id an image path names, worked out from the document's id alone.
+     *
+     * No tree is involved, and that is the point. The access a figure actually needs is
+     * permission to read *the image*, not permission to read the folder the document
+     * happens to sit in — so the id is computed first and matched against the grants
+     * afterwards. Requiring a grant over the document made the obvious move, granting the
+     * `image/` folder the pictures are in, fail with the same message that asked for it.
+     *
+     * The climb is still refused rather than clamped, exactly as in [childId]: [path] may
+     * walk up to the volume root and no further, because there is no id above it to name.
+     */
+    fun siblingId(docId: String, path: LocalPath): String? {
+        val colon = docId.indexOf(':')
+        val prefix = if (colon >= 0) docId.substring(0, colon + 1) else ""
+        val rest = if (colon >= 0) docId.substring(colon + 1) else docId
+        // `raw:/storage/...` is rooted and has to stay rooted; `primary:Documents` is not.
+        val rooted = rest.startsWith('/')
+
+        val segments = rest.split('/').filter { it.isNotEmpty() }
+        // A document id with no name in it is a volume, not a file, so it has no folder.
+        if (segments.isEmpty()) return null
+
+        val folder = segments.dropLast(1)
+        if (path.ascend > folder.size) return null
+
+        val resolved = folder.dropLast(path.ascend) + path.segments
+        if (resolved.isEmpty()) return null
+        return prefix + (if (rooted) "/" else "") + resolved.joinToString("/")
+    }
+
+    /**
      * The document id of an image, or null when [path] leaves the granted tree.
      *
      * Returning null rather than clamping is the same call [com.mdview.markdown.ImagePath]

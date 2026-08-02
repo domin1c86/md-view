@@ -144,4 +144,65 @@ class TreeDocumentIdsTest {
             child("primary:Pictures", "primary:Documents/post.md", Base.DocumentFolder, "a.png"),
         )
     }
+
+    private fun sibling(docId: String, vararg segments: String, ascend: Int = 0): String? =
+        TreeDocumentIds.siblingId(docId, LocalPath(ascend, segments.toList()))
+
+    @Test
+    fun `an image id is worked out from the document alone, with no tree involved`() {
+        // The case the whole change exists for: the reader grants `image/`, which holds
+        // the picture but not the document, and the figure has to resolve anyway.
+        assertEquals(
+            "primary:Documents/image/paris.jpg",
+            sibling("primary:Documents/paris.md", "image", "paris.jpg"),
+        )
+    }
+
+    @Test
+    fun `a sibling id keeps a rooted raw provider rooted`() {
+        assertEquals(
+            "raw:/storage/emulated/0/Download/image/a.png",
+            sibling("raw:/storage/emulated/0/Download/post.md", "image", "a.png"),
+        )
+    }
+
+    @Test
+    fun `a climb walks up from the document's own folder`() {
+        assertEquals(
+            "primary:Documents/assets/logo.png",
+            sibling("primary:Documents/notes/post.md", "assets", "logo.png", ascend = 1),
+        )
+    }
+
+    @Test
+    fun `a climb past the volume root resolves to nothing rather than clamping`() {
+        // There is no id above the volume, so this must refuse rather than invent one --
+        // the same call ImagePath makes about `..`, for the same reason.
+        assertNull(sibling("primary:Documents/post.md", "secret.png", ascend = 2))
+        assertNull(sibling("primary:post.md", "secret.png", ascend = 1))
+    }
+
+    @Test
+    fun `a volume with no document name in it has no folder to resolve against`() {
+        assertNull(sibling("primary:", "a.png"))
+    }
+
+    @Test
+    fun `an opaque id yields an id no grant will ever cover`() {
+        // Drive-shaped ids have no path, so the "folder" is empty and the result is just
+        // the name -- which `covers` then rejects against any real tree. Failing at the
+        // match rather than here keeps one refusal path instead of two.
+        val id = sibling("1cB7_zLmNq4", "a.png")
+        assertFalse(TreeDocumentIds.covers("0AKp9xQvT", id.orEmpty()))
+    }
+
+    @Test
+    fun `a grant on the image's own folder covers the id that names the image`() {
+        val image = sibling("primary:Documents/paris.md", "image", "paris.jpg")!!
+        assertTrue(TreeDocumentIds.covers("primary:Documents/image", image))
+        // And the document's folder still covers it, so nothing that worked stops working.
+        assertTrue(TreeDocumentIds.covers("primary:Documents", image))
+        // But a lookalike sibling folder does not.
+        assertFalse(TreeDocumentIds.covers("primary:Documents/image2", image))
+    }
 }

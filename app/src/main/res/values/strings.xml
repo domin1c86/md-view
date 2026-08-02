@@ -130,6 +130,6 @@
     <string name="image_loading">Loading image…</string>
     <string name="image_failed">Image unavailable: %1$s</string>
     <string name="image_blocked">Image not loaded: %1$s</string>
-    <string name="image_needs_folder">Images need folder access.\nTap to choose the folder this document is in.</string>
-    <string name="image_wrong_folder">That folder does not contain this document.\nTap to choose another.</string>
+    <string name="image_needs_folder">Images need folder access.\nTap to choose the folder holding this image.</string>
+    <string name="image_wrong_folder">No folder you have granted holds this image.\nTap to choose the one it is in.</string>
 </resources>

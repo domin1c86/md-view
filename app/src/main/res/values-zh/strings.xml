@@ -128,6 +128,6 @@
     <string name="image_loading">正在加载图片…</string>
     <string name="image_failed">图片无法加载：%1$s</string>
     <string name="image_blocked">未加载图片：%1$s</string>
-    <string name="image_needs_folder">显示图片需要文件夹访问权限。\n点按以选择本文档所在的文件夹。</string>
-    <string name="image_wrong_folder">该文件夹不包含本文档。\n点按以另选一个。</string>
+    <string name="image_needs_folder">显示图片需要文件夹访问权限。\n点按以选择存放该图片的文件夹。</string>
+    <string name="image_wrong_folder">已授权的文件夹都不包含该图片。\n点按以选择它所在的文件夹。</string>
 </resources>

@@ -95,10 +95,12 @@ declares `INTERNET`. Whether a *remote* image loads depends on the setting above
 
 **Images stored beside the document** — `./img/diagram.png`, `../assets/logo.png` — need one
 extra step, because opening a document through the picker grants access to that one file and
-not to the folder around it. The first such image offers to fix that: tap it, choose the
-folder the document lives in, and every image under that folder resolves from then on. A
-path starting with `/` is measured from the granted folder's root, the convention Hugo,
-Jekyll and MkDocs use.
+not to the folder around it. The first such image offers to fix that: tap it and choose a
+folder that holds the pictures. **Either the folder the images are in or any folder above it
+will do** — granting `img/` is enough, and so is granting the folder the document itself
+sits in. A path starting with `/` is the one exception: it is measured from the granted
+folder's root, the convention Hugo, Jekyll and MkDocs use, so it needs a folder that
+contains the document.
 
 The grant is remembered, covers every document beneath it, and is listed under
 **Mine → Image folders** with a way to hand it back. Two limits are worth knowing:

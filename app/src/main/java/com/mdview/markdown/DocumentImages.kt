@@ -86,13 +86,17 @@ internal class GrantedFolderImages(
      * outermost grant is the closest thing to a site root, which is exactly what a leading
      * slash was taken to mean. Longest-match would resolve it in the wrong folder.
      */
-    private val covering: List<Uri> by lazy {
-        val document = documentUri ?: return@lazy emptyList()
+    /** Every grant that parses, outermost first. See [covering] for why the order matters. */
+    private val trees: List<Uri> by lazy {
         grants.asSequence()
             .mapNotNull { grant -> runCatching { grant.treeUri.toUri() }.getOrNull() }
-            .filter { TreeImageResolver.covers(it, document) }
             .sortedBy { it.toString().length }
             .toList()
+    }
+
+    private val covering: List<Uri> by lazy {
+        val document = documentUri ?: return@lazy emptyList()
+        trees.filter { TreeImageResolver.covers(it, document) }
     }
 
     override fun modelFor(destination: String?): ImageModel {
@@ -102,11 +106,28 @@ internal class GrantedFolderImages(
             ImageTarget.Unusable -> ImageModel.Unusable
             is ImageTarget.Local -> {
                 val document = documentUri ?: return ImageModel.NeedsFolder
-                if (covering.isEmpty()) return ImageModel.NeedsFolder
+                if (trees.isEmpty()) return ImageModel.NeedsFolder
 
-                covering.firstNotNullOfOrNull { tree ->
-                    TreeImageResolver.childUri(tree, document, target.base, target.path)
-                }?.let(ImageModel::Fetch) ?: ImageModel.WrongFolder
+                val resolved = when (target.base) {
+                    // Any grant reaching the image will do -- including the image's own
+                    // folder, which is the one a reader is most likely to pick. A grant
+                    // over the document's folder still matches, since it covers the image
+                    // too, so this is a widening of what works and not a change to it.
+                    ImageTarget.Base.DocumentFolder -> trees.firstNotNullOfOrNull { tree ->
+                        TreeImageResolver.siblingUri(tree, document, target.path)
+                    }
+
+                    // A leading slash means the granted tree's root, so only a tree that
+                    // contains the document can say where to start.
+                    ImageTarget.Base.TreeRoot -> covering.firstNotNullOfOrNull { tree ->
+                        TreeImageResolver.childUri(tree, document, target.base, target.path)
+                    }
+                }
+
+                // Folders are granted but none of them reaches this image. Saying so is
+                // the whole point of the distinction: re-offering the same invitation to
+                // someone who has just accepted it tells them nothing.
+                resolved?.let(ImageModel::Fetch) ?: ImageModel.WrongFolder
             }
         }
     }
