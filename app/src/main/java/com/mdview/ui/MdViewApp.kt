@@ -20,8 +20,6 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,7 +32,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -72,6 +69,7 @@ fun MdViewApp(
     viewModel: MainViewModel,
     onOpenPicker: () -> Unit,
     readingScale: Float,
+    backEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -124,15 +122,16 @@ fun MdViewApp(
 
     // The document screen's only back handler, composed here rather than at the root so
     // it cannot fight with the dashboard's tab handling -- the dispatcher runs whichever
-    // enabled handler registered last.
-    BackHandler { viewModel.goToDashboard() }
+    // enabled handler registered last. [backEnabled] is what keeps that true while both
+    // screens are briefly composed together during the transition.
+    BackHandler(enabled = backEnabled) { viewModel.goToDashboard() }
 
     val skin = LocalSkin.current
 
     Scaffold(
         modifier = modifier,
         containerColor = skin.colors.canvas,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) { data -> SkinSnackbar(data) } },
         topBar = {
             TopAppBar(
                 title = {
@@ -195,7 +194,7 @@ fun MdViewApp(
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_actions))
                     }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    SkinDropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.open_file)) },
                             onClick = {
@@ -261,25 +260,25 @@ fun MdViewApp(
         }
     }
 
-    if (pendingAction != null) {
-        AlertDialog(
-            onDismissRequest = { pendingAction = null },
-            title = { Text(stringResource(R.string.unsaved_title)) },
-            text = { Text(stringResource(R.string.unsaved_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val action = pendingAction
-                    pendingAction = null
-                    when (action) {
-                        PendingAction.Open -> onOpenPicker()
-                        PendingAction.New -> viewModel.newDocument()
-                        null -> Unit
-                    }
-                }) { Text(stringResource(R.string.discard)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingAction = null }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
+    // `visible` rather than an `if`: SkinDialog has to outlive its own dismissal by the
+    // length of the exit animation, so it owns that decision instead of the call site.
+    SkinDialog(
+        visible = pendingAction != null,
+        onDismissRequest = { pendingAction = null },
+        title = stringResource(R.string.unsaved_title),
+        body = stringResource(R.string.unsaved_body),
+        confirmLabel = stringResource(R.string.discard),
+        onConfirm = {
+            val action = pendingAction
+            pendingAction = null
+            when (action) {
+                PendingAction.Open -> onOpenPicker()
+                PendingAction.New -> viewModel.newDocument()
+                null -> Unit
+            }
+        },
+        dismissLabel = stringResource(R.string.cancel),
+        // Discarding unsaved text is the one irreversible thing this dialog offers.
+        destructive = true,
+    )
 }

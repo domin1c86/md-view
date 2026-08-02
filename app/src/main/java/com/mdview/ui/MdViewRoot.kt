@@ -2,6 +2,9 @@ package com.mdview.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +38,7 @@ import com.mdview.markdown.unmeteredNetwork
 import com.mdview.ui.dashboard.DashboardScreen
 import com.mdview.ui.dashboard.MineTab
 import com.mdview.ui.theme.BuiltInSkins
+import com.mdview.ui.theme.MdViewMotion
 import com.mdview.ui.theme.Skin
 import kotlinx.coroutines.launch
 
@@ -150,62 +154,80 @@ fun MdViewRoot(
         LocalRemoteImages provides rememberImageAccess(settings),
         LocalDocumentImages provides documentImages,
     ) {
-        when (state.destination) {
-            Destination.Dashboard -> {
-                val entries = (library as? LibraryState.Content)?.entries.orEmpty()
+        AnimatedContent(
+            targetState = state.destination,
+            transitionSpec = {
+                val forward = targetState == Destination.Document
+                MdViewMotion.screenEnter(forward) togetherWith MdViewMotion.screenExit(forward)
+            },
+            label = "destination",
+        ) { destination ->
+            // Both screens are composed at once while the transition runs, and each owns a
+            // BackHandler. `OnBackPressedDispatcher` dispatches to the most recently
+            // registered *enabled* handler, so without this gate a back press during those
+            // ~220 ms would reach the screen that is on its way out. True only for the one
+            // arriving.
+            val backEnabled = transition.targetState == EnterExitState.Visible
 
-                // Checking which grants survived is a Binder round trip, so it happens
-                // once per visit to the dashboard rather than once per card.
-                var reachable by remember { mutableStateOf(emptySet<String>()) }
-                LaunchedEffect(entries.size) { reachable = viewModel.reachableUris() }
+            when (destination) {
+                Destination.Dashboard -> {
+                    val entries = (library as? LibraryState.Content)?.entries.orEmpty()
 
-                DashboardScreen(
-                    tab = state.tab,
-                    entries = entries,
-                    reachable = reachable,
-                    hasDraft = hasDraft,
-                    onSelectTab = viewModel::showTab,
-                    onOpenPicker = ::launchOpen,
-                    onNewDocument = viewModel::newDocument,
-                    onOpenDraft = viewModel::openUntitledDraft,
-                    onOpen = { viewModel.open(it.uri.toUri()) },
-                    onToggleFavorite = { viewModel.setFavorite(it.uri, !it.isFavorite) },
-                    onForget = { viewModel.forget(it.uri) },
-                    settingsContent = { contentModifier ->
-                        MineTab(
-                            settings = settings,
-                            skins = catalog,
-                            systemDark = systemDark,
-                            onChange = onChangeSettings,
-                            onChangeLanguage = onChangeLanguage,
-                            onImportSkin = {
-                                // Providers routinely mislabel .json, so the filter is
-                                // wide and the codec does the actual rejecting.
-                                importLauncher.launch(
-                                    arrayOf(
-                                        "application/json",
-                                        "text/plain",
-                                        "application/octet-stream",
+                    // Checking which grants survived is a Binder round trip, so it happens
+                    // once per visit to the dashboard rather than once per card.
+                    var reachable by remember { mutableStateOf(emptySet<String>()) }
+                    LaunchedEffect(entries.size) { reachable = viewModel.reachableUris() }
+
+                    DashboardScreen(
+                        tab = state.tab,
+                        entries = entries,
+                        reachable = reachable,
+                        hasDraft = hasDraft,
+                        backEnabled = backEnabled,
+                        onSelectTab = viewModel::showTab,
+                        onOpenPicker = ::launchOpen,
+                        onNewDocument = viewModel::newDocument,
+                        onOpenDraft = viewModel::openUntitledDraft,
+                        onOpen = { viewModel.open(it.uri.toUri()) },
+                        onToggleFavorite = { viewModel.setFavorite(it.uri, !it.isFavorite) },
+                        onForget = { viewModel.forget(it.uri) },
+                        settingsContent = { contentModifier ->
+                            MineTab(
+                                settings = settings,
+                                skins = catalog,
+                                systemDark = systemDark,
+                                onChange = onChangeSettings,
+                                onChangeLanguage = onChangeLanguage,
+                                onImportSkin = {
+                                    // Providers routinely mislabel .json, so the filter is
+                                    // wide and the codec does the actual rejecting.
+                                    importLauncher.launch(
+                                        arrayOf(
+                                            "application/json",
+                                            "text/plain",
+                                            "application/octet-stream",
+                                        )
                                     )
-                                )
-                            },
-                            onDeleteSkin = ::deleteSkin,
-                            importError = importError,
-                            folders = grants,
-                            onForgetFolder = ::forgetFolder,
-                            modifier = contentModifier,
-                        )
-                    },
+                                },
+                                onDeleteSkin = ::deleteSkin,
+                                importError = importError,
+                                folders = grants,
+                                onForgetFolder = ::forgetFolder,
+                                modifier = contentModifier,
+                            )
+                        },
+                        modifier = modifier,
+                    )
+                }
+
+                Destination.Document -> MdViewApp(
+                    viewModel = viewModel,
+                    onOpenPicker = ::launchOpen,
+                    readingScale = settings.readingSize.scale,
+                    backEnabled = backEnabled,
                     modifier = modifier,
                 )
             }
-
-            Destination.Document -> MdViewApp(
-                viewModel = viewModel,
-                onOpenPicker = ::launchOpen,
-                readingScale = settings.readingSize.scale,
-                modifier = modifier,
-            )
         }
     }
 }

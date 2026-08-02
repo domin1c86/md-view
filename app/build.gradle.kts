@@ -101,6 +101,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
 
     implementation(platform(libs.androidx.compose.bom))
+    // Declared rather than left transitive: AnimatedContent and CubicBezierEasing are
+    // direct API use in ui/theme/Motion.kt, not something inherited through material3.
+    implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -124,6 +127,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui)
+    // MotionTest evaluates the easing curves on the JVM; they live in animation-core.
+    testImplementation(libs.androidx.compose.animation)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)

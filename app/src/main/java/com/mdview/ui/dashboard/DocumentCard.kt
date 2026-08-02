@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mdview.R
 import com.mdview.data.LibraryEntry
+import com.mdview.ui.SkinDropdownMenu
 import com.mdview.ui.theme.LocalSkin
 
 /**
@@ -161,7 +161,7 @@ fun DocumentCard(
                     )
                 }
 
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                SkinDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
                         text = {
                             Text(

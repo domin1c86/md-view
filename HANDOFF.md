@@ -189,6 +189,21 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 | 47 | Grant a folder that does *not* contain the document | The distinct "does not contain this document" notice — not the same invitation again |
 | 48 | Open a document from Google Drive that uses a relative image, and grant a Drive folder | The "wrong folder" notice. Never a spinner that never resolves, and never a crash |
 
+### Motion and overlays
+
+No test can assert how something feels, and two of these cover behaviour the platform used
+to provide and no longer does.
+
+| # | Do this | Expect |
+|---|---|---|
+| 49 | Open any menu, and the unsaved-changes dialog, on a **light** skin and then on **Ink** | Neither casts a shadow. On Ink the hairline border is the only thing separating them from the surface behind — if it is missing they will look like floating text |
+| 50 | Edit without saving, then **⋮ → New document** | The dialog fades *and scales* in, and does the same on the way out rather than vanishing. No white or grey flash of a platform dialog window behind it |
+| 51 | With that dialog open, tap the dimmed area outside it. Then reopen it and use the back gesture | Both dismiss it. The scrim's tap is hand-written — `dismissOnClickOutside` cannot fire now that the dialog window fills the screen — so this is the one that would silently regress |
+| 52 | Tap a document card and press back **while it is still animating in** | You land on the dashboard, once. Not two screens back, not out of the app. Both screens are briefly composed together and only the arriving one may answer |
+| 53 | Developer options → **Animator duration scale: off**, then move around the app | Everything is instant and nothing hangs or half-draws. Then set **10x** and check nothing breaks or double-fires. Compose applies this scale itself, so this is verifying it, not implementing it |
+| 54 | Turn on TalkBack, open the dialog, then save a document to get the snackbar | The dialog is announced as a dialog; the snackbar with its action stays long enough to reach. That timeout is the reason `SnackbarHost` was kept rather than hand-rolled |
+| 55 | Rotate with the dialog open; switch language with a menu open | Neither leaves a stranded overlay or an untranslated one |
+
 Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
 survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
 tell me.

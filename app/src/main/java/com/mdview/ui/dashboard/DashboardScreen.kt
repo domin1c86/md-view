@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.mdview.DashboardTab
 import com.mdview.R
 import com.mdview.data.LibraryEntry
+import com.mdview.ui.SkinDropdownMenu
 import com.mdview.ui.theme.LocalSkin
 
 /**
@@ -68,6 +68,7 @@ fun DashboardScreen(
     entries: List<LibraryEntry>,
     reachable: Set<String>,
     hasDraft: Boolean,
+    backEnabled: Boolean,
     onSelectTab: (DashboardTab) -> Unit,
     onOpenPicker: () -> Unit,
     onNewDocument: () -> Unit,
@@ -84,7 +85,12 @@ fun DashboardScreen(
 
     // Back from a secondary tab returns to Recent before it leaves the app -- the
     // standard behaviour for a bottom bar, and it keeps an accidental tap from exiting.
-    BackHandler(enabled = tab != DashboardTab.Recent) { onSelectTab(DashboardTab.Recent) }
+    //
+    // [backEnabled] is false while this screen is animating away, so it cannot claim a
+    // back press that belongs to the document arriving over it.
+    BackHandler(enabled = backEnabled && tab != DashboardTab.Recent) {
+        onSelectTab(DashboardTab.Recent)
+    }
 
     BoxWithConstraints(modifier) {
         val wide = maxWidth >= RAIL_BREAKPOINT
@@ -239,14 +245,22 @@ private fun AddDocumentButton(onOpenPicker: () -> Unit, onNewDocument: () -> Uni
             onClick = { menuOpen = true },
             containerColor = skin.colors.accent,
             contentColor = skin.colors.onAccent,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp),
+            // Every rung, not just the default one. Setting `defaultElevation` alone still
+            // left the button growing a shadow the moment it was pressed or hovered, which
+            // is the one state where the shadow is most visible.
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+            ),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Add,
                 contentDescription = stringResource(R.string.add_document),
             )
         }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        SkinDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.open_file)) },
                 leadingIcon = { Icon(Icons.Outlined.FolderOpen, contentDescription = null) },

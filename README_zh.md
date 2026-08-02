@@ -40,6 +40,9 @@ Markdown 由 [commonmark-java](https://github.com/commonmark/commonmark-java) �
 | 偏好设置 | `.../data/SettingsStore.kt` |
 | 应用内语言 | `.../data/AppLocale.kt` |
 | 状态与导航 | `.../MainViewModel.kt` |
+| 颜色、圆角与字体令牌 | `.../ui/theme/Skin.kt` |
+| 缓动曲线与时长 | `.../ui/theme/Motion.kt` |
+| 菜单、对话框与消息条 | `.../ui/SkinOverlays.kt` |
 | 文档面板 | `.../ui/dashboard/` |
 | 文档界面 | `.../ui/` |
 

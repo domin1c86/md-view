@@ -1,6 +1,8 @@
 package com.mdview
 
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mdview.ui.theme.BuiltInSkins
@@ -66,6 +68,28 @@ class ThemeInvariantTest {
         assertEquals(BuiltInSkins.Nord.colors.surface, outsideSurface)
         assertEquals(outsideSurface, insideSurface)
         assertEquals(outsideShape, insideShape)
+    }
+
+    @Test
+    fun pressFeedbackComesFromTheSkinAndSurvivesTheNestedTheme() {
+        // The ripple is delivered as a CompositionLocal rather than as a MaterialTheme
+        // argument, which is precisely why it survives ReadingTypography without being
+        // re-forwarded -- the opposite of colourAndShapeAreReForwardedThroughTheNestedTheme
+        // above. Both halves of that rule are worth holding down.
+        var outside: RippleConfiguration? = null
+        var inside: RippleConfiguration? = null
+
+        rule.setContent {
+            MdViewTheme(skin = BuiltInSkins.Cobalt) {
+                outside = LocalRippleConfiguration.current
+                ReadingTypography(scale = 1.25f) {
+                    inside = LocalRippleConfiguration.current
+                }
+            }
+        }
+
+        assertEquals(BuiltInSkins.Cobalt.colors.accent, outside?.color)
+        assertEquals("the ripple was lost inside ReadingTypography", outside, inside)
     }
 
     @Test

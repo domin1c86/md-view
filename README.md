@@ -53,6 +53,9 @@ authored in Notepad still looks untouched to the tools that made it.
 | Preferences | `.../data/SettingsStore.kt` |
 | In-app language | `.../data/AppLocale.kt` |
 | State and navigation | `.../MainViewModel.kt` |
+| Colour, shape and type tokens | `.../ui/theme/Skin.kt` |
+| Easing curves and durations | `.../ui/theme/Motion.kt` |
+| Menus, dialogs and the message bar | `.../ui/SkinOverlays.kt` |
 | Dashboard | `.../ui/dashboard/` |
 | Document screen | `.../ui/` |
 

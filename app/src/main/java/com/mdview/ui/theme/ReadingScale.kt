@@ -39,9 +39,11 @@ val LocalMonoTextStyle = compositionLocalOf {
  * largest accessibility size leaves a line barely wide enough for one word.
  *
  * **This re-invokes [MaterialTheme], so anything passed to it must be re-forwarded here.**
- * `colorScheme` and `shapes` are, below. CompositionLocals -- [LocalSkin] included -- are
- * not, and must not be: they propagate on their own, and forwarding one would pin it to
- * whatever it happened to be at this point in the tree.
+ * `colorScheme` and `shapes` are, below. CompositionLocals -- [LocalSkin] and
+ * `LocalRippleConfiguration` included -- are not, and must not be: they propagate on their
+ * own, and forwarding one would pin it to whatever it happened to be at this point in the
+ * tree. That is why the ripple survives this nested theme while a `motionScheme` argument
+ * would not, if Material ever makes one passable.
  */
 @Composable
 fun ReadingTypography(scale: Float, content: @Composable () -> Unit) {
