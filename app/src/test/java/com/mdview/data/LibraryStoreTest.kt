@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -166,5 +167,180 @@ class LibraryStoreTest {
         store.load()
 
         assertEquals(LibraryState.Empty, store.state.value)
+    }
+
+    // -- Folders. In-app labels only: nothing below creates a directory anywhere. --
+
+    @Test
+    fun `a folder comes back after a reload`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val created = store(dispatcher).createFolder("Work")
+
+        val reopened = store(dispatcher)
+        reopened.load()
+
+        assertEquals(listOf(created), reopened.folders.value)
+    }
+
+    @Test
+    fun `a folder name is trimmed`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+
+        assertEquals("Work", store.createFolder("  Work  ")?.name)
+    }
+
+    @Test
+    fun `a blank or over-long name is refused`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+
+        assertNull(store.createFolder("   "))
+        assertNull(store.createFolder("x".repeat(FolderNames.MAX_LENGTH + 1)))
+        assertTrue(store.folders.value.isEmpty())
+    }
+
+    @Test
+    fun `a duplicate name is refused whatever its case`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        store.createFolder("Work")
+
+        // Two chips reading "Work" and "work" are indistinguishable on the strip, and
+        // filing into the wrong one would be silent.
+        assertNull(store.createFolder("work"))
+        assertEquals(1, store.folders.value.size)
+    }
+
+    @Test
+    fun `the folder catalogue is capped`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+
+        repeat(FolderNames.MAX_FOLDERS + 5) { store.createFolder("Folder $it") }
+
+        assertEquals(FolderNames.MAX_FOLDERS, store.folders.value.size)
+    }
+
+    @Test
+    fun `renaming keeps everything filed in it`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+        store.record(entry(1))
+        store.setFolder("content://doc/1", work.id)
+
+        assertTrue(store.renameFolder(work.id, "Projects"))
+
+        assertEquals("Projects", store.folders.value.single().name)
+        // The id is what the entry references, which is the whole reason it exists.
+        assertEquals(work.id, store.snapshot().single().folderId)
+    }
+
+    @Test
+    fun `renaming to a name it already has is allowed`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+
+        // Opening the rename dialog and pressing Rename without editing must not be
+        // rejected as a duplicate of itself.
+        assertTrue(store.renameFolder(work.id, "Work"))
+    }
+
+    @Test
+    fun `renaming onto another folder's name is refused`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+        store.createFolder("Recipes")
+
+        assertFalse(store.renameFolder(work.id, "Recipes"))
+        assertEquals("Work", store.folders.value.first { it.id == work.id }.name)
+    }
+
+    @Test
+    fun `deleting a folder unfiles its documents rather than removing them`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+        store.record(entry(1))
+        store.record(entry(2))
+        store.setFolder("content://doc/1", work.id)
+
+        store.deleteFolder(work.id)
+
+        // Deleting a label the user made must not cost them the documents wearing it --
+        // and there was never a directory to delete either way.
+        assertEquals(2, store.snapshot().size)
+        assertTrue(store.snapshot().all { it.folderId == null })
+        assertTrue(store.folders.value.isEmpty())
+    }
+
+    @Test
+    fun `filing into a folder that does not exist is ignored`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        store.record(entry(1))
+
+        store.setFolder("content://doc/1", "no-such-folder")
+
+        assertNull(store.snapshot().single().folderId)
+    }
+
+    @Test
+    fun `reopening a document does not unfile it`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+        store.record(entry(1))
+        store.setFolder("content://doc/1", work.id)
+
+        // The ViewModel builds a fresh entry on every open and knows nothing about
+        // folders, exactly as it knows nothing about favourites.
+        store.record(entry(1, opened = 999))
+
+        assertEquals(work.id, store.snapshot().single().folderId)
+    }
+
+    @Test
+    fun `a filed document is never evicted to make room`() = runTest {
+        val store = store(StandardTestDispatcher(testScheduler))
+        val work = store.createFolder("Work")!!
+        store.record(entry(0, opened = 0))
+        store.setFolder("content://doc/0", work.id)
+
+        // Filing is as deliberate as starring. A folder that quietly empties itself at
+        // fifty entries is worse than no folder at all.
+        repeat(LibraryStore.MAX_ENTRIES + 10) { store.record(entry(it + 1, opened = it + 1L)) }
+
+        assertTrue(store.snapshot().any { it.uri == "content://doc/0" })
+        assertEquals(LibraryStore.MAX_ENTRIES, store.snapshot().size)
+    }
+
+    @Test
+    fun `a document pointing at a folder that is gone loads unfiled`() = runTest {
+        // Self-healing against a half-written pair of files: entries.tsv landed, and
+        // folders.tsv did not.
+        val orphan = entry(1).copy(folderId = "vanished")
+        folder.newFile("entries.tsv").writeText(LibraryCodec.encode(listOf(orphan)))
+        val store = store(StandardTestDispatcher(testScheduler))
+
+        store.load()
+
+        assertNull(store.snapshot().single().folderId)
+    }
+
+    @Test
+    fun `a corrupt folders file leaves the documents alone`() = runTest {
+        folder.newFile("entries.tsv").writeText(LibraryCodec.encode(listOf(entry(1))))
+        folder.newFile("folders.tsv").writeText("not a folder list at all")
+        val store = store(StandardTestDispatcher(testScheduler))
+
+        store.load()
+
+        assertEquals(1, store.snapshot().size)
+        assertTrue(store.folders.value.isEmpty())
+    }
+
+    @Test
+    fun `creating a folder before the first load does not discard what is on disk`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        store(dispatcher).createFolder("Work")
+
+        val fresh = store(dispatcher)
+        fresh.createFolder("Recipes")
+
+        assertEquals(listOf("Work", "Recipes"), fresh.folders.value.map { it.name })
     }
 }

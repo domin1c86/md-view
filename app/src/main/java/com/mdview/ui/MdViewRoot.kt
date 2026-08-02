@@ -60,6 +60,7 @@ fun MdViewRoot(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val library by viewModel.libraryState.collectAsStateWithLifecycle()
+    val folders by viewModel.folders.collectAsStateWithLifecycle()
     val hasDraft by viewModel.hasUntitledDraft.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -100,13 +101,26 @@ fun MdViewRoot(
         }
     }
 
+    // Which folder the picker was opened from, remembered across the trip out to the
+    // system UI. Not in SavedStateHandle: if the process dies inside DocumentsUI the
+    // document still opens, merely unfiled, and that is a fair price for not persisting
+    // a value whose whole life is one round trip.
+    var pendingFolder by remember { mutableStateOf<String?>(null) }
+
     // Many providers report .md as an unknown binary type, so accept that too --
     // filtering on text/* alone hides the very files this app exists to open.
     val openLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let(viewModel::open) }
+    ) { uri ->
+        val folder = pendingFolder
+        pendingFolder = null
+        uri?.let { viewModel.open(it, fileInto = folder) }
+    }
 
-    fun launchOpen() = openLauncher.launch(arrayOf("text/*", "application/octet-stream"))
+    fun launchOpen(folderId: String? = null) {
+        pendingFolder = folderId
+        openLauncher.launch(arrayOf("text/*", "application/octet-stream"))
+    }
 
     val folderStore = remember(context) { MdViewApplication.from(context).folders }
     val folderAccess = remember(context) { FolderAccess(context.contentResolver) }
@@ -181,10 +195,19 @@ fun MdViewRoot(
                     DashboardScreen(
                         tab = state.tab,
                         entries = entries,
+                        folders = folders,
+                        selectedFolderId = state.selectedFolderId,
                         reachable = reachable,
                         hasDraft = hasDraft,
                         backEnabled = backEnabled,
                         onSelectTab = viewModel::showTab,
+                        onSelectFolder = viewModel::selectFolder,
+                        onCreateFolder = viewModel::createFolder,
+                        onRenameFolder = viewModel::renameFolder,
+                        onDeleteFolder = viewModel::deleteFolder,
+                        onMoveDocument = { entry, folderId ->
+                            viewModel.moveToFolder(entry.uri, folderId)
+                        },
                         onOpenPicker = ::launchOpen,
                         onNewDocument = viewModel::newDocument,
                         onOpenDraft = viewModel::openUntitledDraft,
@@ -222,7 +245,9 @@ fun MdViewRoot(
 
                 Destination.Document -> MdViewApp(
                     viewModel = viewModel,
-                    onOpenPicker = ::launchOpen,
+                    // Unfiled: opening from the document screen is not "inside" whichever
+                    // chip happens to be selected on a dashboard the user has left.
+                    onOpenPicker = { launchOpen() },
                     readingScale = settings.readingSize.scale,
                     backEnabled = backEnabled,
                     modifier = modifier,

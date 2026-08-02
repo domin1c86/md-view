@@ -36,6 +36,32 @@
     <string name="no_favorites_title">No favourites yet</string>
     <string name="no_favorites_body">Star a document in Recent and it will be waiting for you here.</string>
 
+    <!--
+      Folders group documents inside MdView only. No directory is ever created on the
+      device, which is what the delete and move wording has to keep making clear.
+    -->
+    <string name="folder_new">New folder</string>
+    <string name="folder_rename">Rename</string>
+    <string name="folder_delete">Delete folder</string>
+    <string name="folder_name_hint">Folder name</string>
+    <string name="folder_create_confirm">Create</string>
+    <string name="folder_rename_title">Rename folder</string>
+    <string name="folder_rename_confirm">Rename</string>
+    <string name="folder_delete_title">Delete this folder?</string>
+    <string name="folder_delete_body">The documents in it stay in Recent. Nothing is deleted from your device — a folder here is only a label.</string>
+    <string name="folder_delete_confirm">Delete</string>
+    <string name="folder_move">Move to folder…</string>
+    <string name="folder_move_title">Move to folder</string>
+    <string name="folder_move_none">No folder</string>
+    <string name="folder_move_confirm">Move</string>
+    <string name="folder_name_blank">Give the folder a name</string>
+    <string name="folder_name_too_long">That name is too long</string>
+    <string name="folder_name_duplicate">You already have a folder with that name</string>
+    <string name="folders_full">No room for more folders. Delete one first.</string>
+    <string name="folder_show_all">Show every document</string>
+    <string name="no_folder_documents_title">This folder is empty</string>
+    <string name="no_folder_documents_body">Add a document with +, or long-press a card in Recent and move it here.</string>
+
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reading">Reading</string>

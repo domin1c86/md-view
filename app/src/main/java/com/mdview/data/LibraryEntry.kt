@@ -30,6 +30,14 @@ data class LibraryEntry(
      * granting app's permission lapses, so the card says so instead of pretending.
      */
     val isTransient: Boolean = false,
+    /**
+     * The [LibraryFolder] the user filed this under, or null when it is unfiled.
+     *
+     * Purely an in-app label: no directory exists for it and the document has not moved
+     * on disk. Filing is also a statement that the document is wanted, so a filed row is
+     * exempt from eviction the same way a starred one is.
+     */
+    val folderId: String? = null,
 ) {
     /** What the card shows as its headline. */
     val heading: String get() = title?.takeIf { it.isNotBlank() } ?: displayName

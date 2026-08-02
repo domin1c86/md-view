@@ -28,6 +28,7 @@ fun DocumentList(
     onOpen: (LibraryEntry) -> Unit,
     onToggleFavorite: (LibraryEntry) -> Unit,
     onForget: (LibraryEntry) -> Unit,
+    onMove: (LibraryEntry) -> Unit,
     scrollState: LazyListState,
     modifier: Modifier = Modifier,
     header: (@Composable () -> Unit)? = null,
@@ -48,6 +49,7 @@ fun DocumentList(
                 onOpen = { onOpen(entry) },
                 onToggleFavorite = { onToggleFavorite(entry) },
                 onForget = { onForget(entry) },
+                onMove = { onMove(entry) },
             )
         }
     }

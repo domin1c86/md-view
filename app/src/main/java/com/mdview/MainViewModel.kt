@@ -19,6 +19,7 @@ import com.mdview.data.DocumentRepository
 import com.mdview.data.DocumentSource
 import com.mdview.data.DraftStore
 import com.mdview.data.LibraryEntry
+import com.mdview.data.LibraryFolder
 import com.mdview.data.LibraryState
 import com.mdview.data.LibraryStore
 import com.mdview.data.LoadedDocument
@@ -64,6 +65,15 @@ private fun nextId(): Long = ++messageCounter
 data class UiState(
     val destination: Destination = Destination.Dashboard,
     val tab: DashboardTab = DashboardTab.Recent,
+    /**
+     * The folder chip filtering Recent, or null for everything.
+     *
+     * Kept here rather than in `SavedStateHandle`, matching [tab]: both survive the
+     * `recreate()` a language change triggers, because the ViewModel is retained across
+     * it, and neither is worth restoring after a process death onto a screen the user
+     * would not have expected to still be filtered.
+     */
+    val selectedFolderId: String? = null,
     val uri: Uri? = null,
     val fileName: String? = null,
     val mode: Mode = Mode.Preview,
@@ -124,6 +134,9 @@ class MainViewModel(
 
     val libraryState: StateFlow<LibraryState> = library.state
 
+    /** The folders the user made, oldest first. Purely in-app labels; see [LibraryFolder]. */
+    val folders: StateFlow<List<LibraryFolder>> = library.folders
+
     private val draftKey: String
         get() = adoptedKey ?: DraftStore.UNTITLED_KEY
 
@@ -163,7 +176,16 @@ class MainViewModel(
         if (lastRequestedUri == uri) navigate(Destination.Document) else open(uri)
     }
 
-    fun open(uri: Uri) {
+    /**
+     * Opens [uri], filing it under [fileInto] when the picker was launched from inside a
+     * folder.
+     *
+     * The filing is a separate store call rather than a field on the recorded entry,
+     * because [LibraryStore.record] deliberately preserves an existing row's folder —
+     * otherwise importing into Work a document already filed in Recipes would leave it
+     * where it was.
+     */
+    fun open(uri: Uri, fileInto: String? = null) {
         lastRequestedUri = uri
         // Written before the read rather than after: a process death partway through
         // would otherwise restore onto the document screen with nothing to show.
@@ -207,6 +229,7 @@ class MainViewModel(
                         )
                     }
                     recordInLibrary(uri, name, text, access)
+                    if (fileInto != null) library.setFolder(uri.toString(), fileInto)
                 }
                 .onFailure { error ->
                     savedState.remove<String>(KEY_URI)
@@ -284,6 +307,40 @@ class MainViewModel(
     }
 
     fun showTab(tab: DashboardTab) = _uiState.update { it.copy(tab = tab) }
+
+    /** Filters Recent to one folder, or to everything when [id] is null. */
+    fun selectFolder(id: String?) = _uiState.update { it.copy(selectedFolderId = id) }
+
+    /**
+     * Makes a folder and moves into it, so the very next **+** files into what was just
+     * created — which is the whole point of making one.
+     */
+    fun createFolder(name: String) {
+        viewModelScope.launch {
+            library.createFolder(name)?.let { folder -> selectFolder(folder.id) }
+        }
+    }
+
+    fun renameFolder(id: String, name: String) {
+        viewModelScope.launch { library.renameFolder(id, name) }
+    }
+
+    /**
+     * Forgets a folder. Its documents are unfiled, not removed — and no directory is
+     * touched, because none was ever made.
+     */
+    fun deleteFolder(id: String) {
+        viewModelScope.launch {
+            library.deleteFolder(id)
+            // The filter would otherwise point at a folder that is gone, leaving Recent
+            // showing nothing with no chip selected to explain why.
+            if (_uiState.value.selectedFolderId == id) selectFolder(null)
+        }
+    }
+
+    fun moveToFolder(uri: String, folderId: String?) {
+        viewModelScope.launch { library.setFolder(uri, folderId) }
+    }
 
     /**
      * Leaves the document screen. The draft is written on the way out rather than left

@@ -5,7 +5,7 @@ A minimal Markdown reader and editor for Android.
 The app opens on a **dashboard** of documents you have opened before, shown as cards with
 their heading and a couple of lines of the text. Three tabs along the bottom:
 
-- **Recent** — everything you have opened, newest first.
+- **Recent** — everything you have opened, newest first, with your folders along the top.
 - **Favourites** — the ones you starred.
 - **Mine** — theme, skins, language, reading text size and image loading.
 
@@ -25,6 +25,16 @@ permission — the file you pick in the system picker is the grant. It also regi
 The dashboard is a list of *documents you have opened*, not a file browser: the picker
 grants access to one file at a time, so there is nothing to browse. Starring a document
 also exempts it from the 50-entry cap, and removing a card hands its access grant back.
+
+**Folders group documents inside the app only.** The chips above the Recent list are
+labels MdView keeps in its own index — making one creates no directory, and moving a
+document into one does not move the file. Everything stays exactly where you opened it
+from. Tap a chip to see only what is filed there, tap it again (or press back) to see
+everything, and long-press it to rename or delete it. Deleting a folder never deletes
+documents; they simply stop being filed. Filed documents stay in Recent too, the way a
+starred one does, and are exempt from the 50-entry cap for the same reason.
+
+With a folder open, **+** files whatever you pick into it as well as opening it.
 
 Markdown is parsed by [commonmark-java](https://github.com/commonmark/commonmark-java)
 with the GitHub tables, strikethrough and autolink extensions plus YAML front matter,
@@ -49,7 +59,7 @@ authored in Notepad still looks untouched to the tools that made it.
 | Card headings and excerpts | `.../markdown/DocumentSummary.kt` |
 | File I/O (SAF) | `.../data/DocumentRepository.kt` |
 | Autosaved drafts | `.../data/DraftStore.kt` |
-| Recents and favourites | `.../data/LibraryStore.kt` |
+| Recents, favourites and folders | `.../data/LibraryStore.kt` |
 | Preferences | `.../data/SettingsStore.kt` |
 | In-app language | `.../data/AppLocale.kt` |
 | State and navigation | `.../MainViewModel.kt` |

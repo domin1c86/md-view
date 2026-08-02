@@ -1,6 +1,7 @@
 package com.mdview.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,7 +60,7 @@ class LibraryCodecTest {
 
     @Test
     fun `a file from a newer version is discarded rather than misread`() {
-        val future = LibraryCodec.encode(listOf(entry)).replaceFirst("v1", "v2")
+        val future = LibraryCodec.encode(listOf(entry)).replaceFirst("v2", "v3")
 
         assertTrue(LibraryCodec.decode(future).isEmpty())
     }
@@ -67,6 +68,52 @@ class LibraryCodecTest {
     @Test
     fun `a file with no version header is discarded`() {
         assertTrue(LibraryCodec.decode("content://doc/1\tnotes.md\t\t\t0\t0\t1\t0\n").isEmpty())
+    }
+
+    @Test
+    fun `a v1 file written before folders existed still reads`() {
+        // The upgrade path. Refusing eight-field rows would silently empty the recents
+        // list of everyone who had used the app before folders shipped.
+        val v1 = "v1\ncontent://doc/1\tnotes.md\tRelease notes\tAn excerpt\t42\t1\t0\t1\n"
+
+        val decoded = LibraryCodec.decode(v1).single()
+
+        assertEquals("content://doc/1", decoded.uri)
+        assertEquals("Release notes", decoded.title)
+        assertEquals(42L, decoded.lastOpened)
+        assertTrue(decoded.isFavorite)
+        assertNull(decoded.folderId)
+    }
+
+    @Test
+    fun `a v1 row is rewritten as v2`() {
+        val v1 = "v1\ncontent://doc/1\tnotes.md\tRelease notes\tAn excerpt\t42\t1\t0\t1\n"
+
+        val rewritten = LibraryCodec.encode(LibraryCodec.decode(v1))
+
+        assertTrue(rewritten.startsWith("v2\n"))
+        assertEquals(LibraryCodec.decode(v1), LibraryCodec.decode(rewritten))
+    }
+
+    @Test
+    fun `a v1 row carrying an extra field is dropped rather than misread as v2`() {
+        // Nine fields under a v1 header is not a filed document -- it is a corrupt row,
+        // and reading its ninth field as a folder id would invent a folder.
+        val text = "v1\ncontent://doc/1\tnotes.md\t\t\t0\t0\t1\t0\tf1\n"
+
+        assertTrue(LibraryCodec.decode(text).isEmpty())
+    }
+
+    @Test
+    fun `a filed document survives a round trip`() {
+        val filed = entry.copy(folderId = "4f3c-90ab")
+
+        assertEquals("4f3c-90ab", LibraryCodec.decode(LibraryCodec.encode(listOf(filed))).single().folderId)
+    }
+
+    @Test
+    fun `an empty folder field comes back as null rather than blank`() {
+        assertNull(LibraryCodec.decode(LibraryCodec.encode(listOf(entry))).single().folderId)
     }
 
     @Test

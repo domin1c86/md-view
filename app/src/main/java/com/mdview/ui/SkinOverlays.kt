@@ -104,7 +104,7 @@ fun SkinDropdownMenu(
 }
 
 /**
- * A confirmation dialog drawn and animated by this app rather than by the platform.
+ * The panel every dialog in this app is drawn on, animated by us rather than the platform.
  *
  * Three things here are not what `AlertDialog` would have done, and each is deliberate:
  *
@@ -123,18 +123,17 @@ fun SkinDropdownMenu(
  * and the window fills the screen. That also means `dismissOnClickOutside` can never fire
  * again -- there is no longer an "outside" -- so the scrim carries the dismiss itself, and
  * `SkinOverlayTest` covers that because no compiler will.
+ *
+ * All three are subtle enough that a second dialog copying them would eventually copy them
+ * wrong, which is why [SkinDialog] and the folder dialogs share this rather than the look
+ * alone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SkinDialog(
+fun SkinPanelDialog(
     visible: Boolean,
     onDismissRequest: () -> Unit,
-    title: String,
-    body: String,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    dismissLabel: String,
-    destructive: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val panelState = remember { MutableTransitionState(false) }
     panelState.targetState = visible
@@ -205,40 +204,78 @@ fun SkinDialog(
                         .pointerInput(Unit) { detectTapGestures { } }
                         .testTag(OverlayTags.DIALOG)
                         .padding(24.dp),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = skin.colors.textPrimary,
-                    )
-                    Text(
-                        text = body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = skin.colors.textSecondary,
-                        modifier = Modifier.padding(top = 10.dp),
-                    )
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.End)
-                            .padding(top = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        TextButton(onClick = onDismissRequest) {
-                            Text(dismissLabel, color = skin.colors.textSecondary)
-                        }
-                        TextButton(onClick = onConfirm) {
-                            Text(
-                                text = confirmLabel,
-                                color = if (destructive) {
-                                    skin.colors.danger
-                                } else {
-                                    skin.colors.accent
-                                },
-                            )
-                        }
-                    }
-                }
+                    content = content,
+                )
             }
+        }
+    }
+}
+
+/** A confirmation dialog: a sentence and two buttons, on the shared [SkinPanelDialog]. */
+@Composable
+fun SkinDialog(
+    visible: Boolean,
+    onDismissRequest: () -> Unit,
+    title: String,
+    body: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    dismissLabel: String,
+    destructive: Boolean = false,
+) {
+    val skin = LocalSkin.current
+
+    SkinPanelDialog(visible = visible, onDismissRequest = onDismissRequest) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = skin.colors.textPrimary,
+        )
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = skin.colors.textSecondary,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        SkinDialogButtons(
+            onDismissRequest = onDismissRequest,
+            dismissLabel = dismissLabel,
+            confirmLabel = confirmLabel,
+            onConfirm = onConfirm,
+            destructive = destructive,
+        )
+    }
+}
+
+/** The trailing button row, so every dialog spaces and colours its actions alike. */
+@Composable
+fun ColumnScope.SkinDialogButtons(
+    onDismissRequest: () -> Unit,
+    dismissLabel: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    destructive: Boolean = false,
+    confirmEnabled: Boolean = true,
+) {
+    val skin = LocalSkin.current
+    Row(
+        modifier = Modifier
+            .align(Alignment.End)
+            .padding(top = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        TextButton(onClick = onDismissRequest) {
+            Text(dismissLabel, color = skin.colors.textSecondary)
+        }
+        TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+            Text(
+                text = confirmLabel,
+                color = when {
+                    !confirmEnabled -> skin.colors.textMuted
+                    destructive -> skin.colors.danger
+                    else -> skin.colors.accent
+                },
+            )
         }
     }
 }

@@ -40,8 +40,8 @@ Expected results:
 
 | Command | Expect |
 |:--|:--|
-| `testDebugUnitTest` | **82 tests, 0 failures** across 8 classes |
-| `pixelApi34DebugAndroidTest` | **73 tests, 0 failures** (boots its own emulator — no device needed) |
+| `testDebugUnitTest` | **239 tests, 0 failures** |
+| `pixelApi34DebugAndroidTest` | **132 tests, 0 failures** (boots its own emulator — no device needed) |
 | `lintDebug` | **0 errors, exactly 2 warnings**: `OldTargetApi` and `ObsoleteSdkInt` |
 | `assembleRelease` | succeeds, unsigned APK ≈ **1.7 MB** |
 
@@ -204,9 +204,30 @@ to provide and no longer does.
 | 54 | Turn on TalkBack, open the dialog, then save a document to get the snackbar | The dialog is announced as a dialog; the snackbar with its action stays long enough to reach. That timeout is the reason `SnackbarHost` was kept rather than hand-rolled |
 | 55 | Rotate with the dialog open; switch language with a menu open | Neither leaves a stranded overlay or an untranslated one |
 
+### Folders
+
+Folders are an in-app label and **nothing else**. Item 58 is the one that proves it, and
+it is the whole point of the feature — if a directory appears anywhere, stop.
+
+| # | Do this | Expect |
+|---|---|---|
+| 56 | On **Recent**, tap **+ New folder**, name it `Work` | The chip appears and is selected: the list below is empty, saying so |
+| 57 | With `Work` open, tap **+** → **Open file**, pick a document | It opens for reading, as it does anywhere else. Press back: it is in `Work` |
+| 58 | Open a file manager and look at that document's folder, at internal storage's root, and at `Android/data/com.mdview` | **No `Work` directory anywhere**, and the document has not moved. This is the constraint the whole feature turns on |
+| 59 | Back out to the full list, long-press another card → **Move to folder…** → `Work` → **Move** | It joins `Work` |
+| 60 | Look at Recent with no chip selected | **Both filed documents are still listed.** Recent is a log of what you opened, not a bucket that filing empties |
+| 61 | Tap the `Work` chip, then tap it again | Filters, then unfilters. The back gesture does the same, and only then leaves the app |
+| 62 | Long-press the `Work` chip → **Rename**, call it `Projects` | The chip renames and still holds both documents — the id is what they reference, not the name |
+| 63 | Try to make a second folder called `projects` | Refused inline, in the dialog, saying a folder already has that name. The dialog stays open with your text |
+| 64 | Press **Create** with the field empty | Refused with a reason. Nothing is created and the dialog stays |
+| 65 | Long-press the chip → **Delete folder** → **Delete** | The chip goes; **both documents are still in Recent**, and nothing on the device was deleted |
+| 66 | Make a folder, file a document, then `adb shell am force-stop com.mdview` and relaunch | The chip and its contents survived |
+| 67 | Switch to 简体中文 and repeat 56 and 65 | The chip, both dialogs and the "nothing is deleted from your device" wording are all translated |
+| 68 | Widen past 640 dp (`adb shell wm size 1600x1000`) | The strip is still above the cards, with the tabs on the rail. Reset with `adb shell wm size reset` |
+
 Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
 survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
-tell me.
+tell me. Item 58 is the one to fail the folder feature on.
 
 ---
 

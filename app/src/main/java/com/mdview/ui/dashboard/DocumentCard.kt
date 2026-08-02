@@ -51,6 +51,20 @@ object DashboardTags {
     fun card(uri: String) = "dashboard:card:$uri"
     fun star(uri: String) = "dashboard:star:$uri"
     fun tab(name: String) = "dashboard:tab:$name"
+
+    const val FOLDER_STRIP = "dashboard:folders"
+    const val NEW_FOLDER = "dashboard:newFolder"
+    fun folderChip(id: String) = "dashboard:folder:$id"
+
+    /**
+     * The name field is reached by tag rather than by `hasSetTextAction()`. That matcher
+     * is used unqualified in nine places in `MdViewAppTest`, where it means "the one text
+     * input on the document screen"; a second one anywhere would be a trap waiting for
+     * whoever writes the tenth.
+     */
+    const val FOLDER_NAME_FIELD = "dashboard:folderName"
+    const val FOLDER_NAME_ERROR = "dashboard:folderNameError"
+    fun folderChoice(id: String?) = "dashboard:folderChoice:${id ?: "none"}"
 }
 
 /**
@@ -67,6 +81,7 @@ fun DocumentCard(
     onOpen: () -> Unit,
     onToggleFavorite: () -> Unit,
     onForget: () -> Unit,
+    onMove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -177,6 +192,13 @@ fun DocumentCard(
                         onClick = {
                             menuOpen = false
                             onToggleFavorite()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_move)) },
+                        onClick = {
+                            menuOpen = false
+                            onMove()
                         },
                     )
                     DropdownMenuItem(

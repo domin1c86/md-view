@@ -37,6 +37,32 @@
     <string name="no_favorites_title">还没有收藏</string>
     <string name="no_favorites_body">在“最近”里给文档加星，它就会出现在这里。</string>
 
+    <!--
+      Folders group documents inside MdView only. No directory is ever created on the
+      device, which is what the delete and move wording has to keep making clear.
+    -->
+    <string name="folder_new">新建文件夹</string>
+    <string name="folder_rename">重命名</string>
+    <string name="folder_delete">删除文件夹</string>
+    <string name="folder_name_hint">文件夹名称</string>
+    <string name="folder_create_confirm">创建</string>
+    <string name="folder_rename_title">重命名文件夹</string>
+    <string name="folder_rename_confirm">重命名</string>
+    <string name="folder_delete_title">删除这个文件夹？</string>
+    <string name="folder_delete_body">其中的文档仍会留在“最近”里。设备上不会删除任何东西 —— 这里的文件夹只是一个标签。</string>
+    <string name="folder_delete_confirm">删除</string>
+    <string name="folder_move">移动到文件夹…</string>
+    <string name="folder_move_title">移动到文件夹</string>
+    <string name="folder_move_none">不放入文件夹</string>
+    <string name="folder_move_confirm">移动</string>
+    <string name="folder_name_blank">请为文件夹取个名字</string>
+    <string name="folder_name_too_long">名称太长了</string>
+    <string name="folder_name_duplicate">已经有同名的文件夹了</string>
+    <string name="folders_full">文件夹数量已达上限，请先删除一个。</string>
+    <string name="folder_show_all">显示全部文档</string>
+    <string name="no_folder_documents_title">这个文件夹是空的</string>
+    <string name="no_folder_documents_body">用 + 添加文档，或在“最近”里长按卡片把它移动过来。</string>
+
     <!-- Settings -->
     <string name="settings_appearance">外观</string>
     <string name="settings_reading">阅读</string>
