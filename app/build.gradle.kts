@@ -1,7 +1,17 @@
 // AGP 9 applies Kotlin itself; the standalone kotlin-android plugin is rejected.
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// 签名凭证存放在 local.properties 中：已加入 gitignore，并由 tools/wbuild.sh 同步到
+// Windows 镜像中，因此不会进入 git。
+// 全新克隆的仓库中没有此文件，这也是下面 release signingConfig 使用条件判断的原因。
+val signing = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }
+        ?.inputStream()?.use { load(it) }
 }
 
 android {
@@ -20,11 +30,29 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            signing.getProperty("release.storeFile")?.let {
+                storeFile = file(it)
+                storePassword = signing.getProperty("release.storePassword")
+                keyAlias = signing.getProperty("release.keyAlias")
+                keyPassword = signing.getProperty("release.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // 条件判断，因此克隆的仓库仍然可以构建——
+            // 未签名，和现在一样。如果不加保护直接赋值，会在配置阶段失败，
+            // 报错 "storeFile has not been set"。
+            if (signing.getProperty("release.storeFile") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
