@@ -38,6 +38,9 @@ fun EditorScreen(
         modifier = modifier
             .fillMaxSize()
             .background(skin.colors.canvas)
+            // Above the padding, so the indicator sits at the true edge of the screen
+            // rather than 20 dp inside it where the text stops.
+            .overlayScrollbar(scrollState)
             .padding(horizontal = 20.dp, vertical = 16.dp),
         textStyle = textStyle,
         cursorBrush = SolidColor(skin.colors.accent),

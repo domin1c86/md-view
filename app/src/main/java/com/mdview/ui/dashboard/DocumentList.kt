@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mdview.data.LibraryEntry
 import com.mdview.ui.CenteredNotice
+import com.mdview.ui.overlayScrollbar
 
 /**
  * The scrolling list of document cards shared by Recent and Favourites.
@@ -34,7 +35,10 @@ fun DocumentList(
     header: (@Composable () -> Unit)? = null,
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize().testTag(DashboardTags.CARD_LIST),
+        modifier = modifier
+            .fillMaxSize()
+            .overlayScrollbar(scrollState)
+            .testTag(DashboardTags.CARD_LIST),
         state = scrollState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
