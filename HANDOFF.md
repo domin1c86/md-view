@@ -225,6 +225,22 @@ it is the whole point of the feature — if a directory appears anywhere, stop.
 | 67 | Switch to 简体中文 and repeat 56 and 65 | The chip, both dialogs and the "nothing is deleted from your device" wording are all translated |
 | 68 | Widen past 640 dp (`adb shell wm size 1600x1000`) | The strip is still above the cards, with the tabs on the rail. Reset with `adb shell wm size reset` |
 
+### The scroll indicator
+
+Nothing here can be asserted on a device: the indicator has no semantics node, and what it
+is *for* is a feeling about where you are in a document. Item 70 is the one that would
+catch it having quietly cost the content some width.
+
+| # | Do this | Expect |
+|---|---|---|
+| 69 | Open a long document and flick the preview | A thin capsule at the right edge while it moves, gone about a second after it stops. At rest there must be nothing there |
+| 70 | Watch the text at the right margin as the indicator appears and fades | **Nothing shifts.** It is drawn over the content, not laid out beside it — if a line rewraps or the margin twitches, it has taken space it must not have |
+| 71 | Open a document short enough to fit on one screen | No indicator at all, at any point, including the moment the screen opens |
+| 72 | Drag the list and hold your finger still for several seconds without letting go | It stays visible under your finger. The one-second timer runs from the last movement, and a held gesture never starts it |
+| 73 | Switch to source, put the caret on the last line and type until the view scrolls itself | It appears for that too. It follows the content, not the finger — which is why it watches the scroll position and not just the gesture |
+| 74 | Widen past 640 dp (`adb shell wm size 1600x1000`) and scroll the preview | It sits at the edge of the **window**, not at the edge of the centred reading column. Reset with `adb shell wm size reset` |
+| 75 | Compare it on **Paper** and on **Ink** | Visible on both, and quiet enough that it does not compete with the text it is drawn over. It follows the skin's muted text colour rather than a colour of its own |
+
 Items 10 and 20 matter most. Both are the data-loss guarantee: unsaved work has to
 survive a kill *and* survive walking away to the dashboard. If either loses text, stop and
 tell me. Item 58 is the one to fail the folder feature on.

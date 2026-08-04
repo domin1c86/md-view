@@ -47,6 +47,7 @@ Markdown 由 [commonmark-java](https://github.com/commonmark/commonmark-java) �
 | 颜色、圆角与字体令牌 | `.../ui/theme/Skin.kt` |
 | 缓动曲线与时长 | `.../ui/theme/Motion.kt` |
 | 菜单、对话框与消息条 | `.../ui/SkinOverlays.kt` |
+| 滚动指示条 | `.../ui/OverlayScrollbar.kt` |
 | 文档面板 | `.../ui/dashboard/` |
 | 文档界面 | `.../ui/` |
 

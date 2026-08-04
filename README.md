@@ -66,6 +66,7 @@ authored in Notepad still looks untouched to the tools that made it.
 | Colour, shape and type tokens | `.../ui/theme/Skin.kt` |
 | Easing curves and durations | `.../ui/theme/Motion.kt` |
 | Menus, dialogs and the message bar | `.../ui/SkinOverlays.kt` |
+| Scroll indicator | `.../ui/OverlayScrollbar.kt` |
 | Dashboard | `.../ui/dashboard/` |
 | Document screen | `.../ui/` |
 

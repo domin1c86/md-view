@@ -41,7 +41,14 @@ fun PreviewScreen(
     SelectionContainer(modifier = modifier.fillMaxSize().background(skin.colors.canvas)) {
         // Prose stops being readable much past 70 characters a line, so on a tablet the
         // column is centred and capped rather than stretched across the whole window.
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        //
+        // The indicator goes on this box rather than on the LazyColumn, which is the same
+        // height but only as wide as the reading column: on a wide window it belongs at
+        // the edge of the window the user is scrolling, not floating in the middle of it.
+        Box(
+            modifier = Modifier.fillMaxSize().overlayScrollbar(scrollState),
+            contentAlignment = Alignment.TopCenter,
+        ) {
             LazyColumn(
                 state = scrollState,
                 modifier = Modifier.widthIn(max = MAX_READING_WIDTH).fillMaxSize(),
